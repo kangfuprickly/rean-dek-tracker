@@ -1,27 +1,44 @@
 
 import { Student, AttendanceRecord } from '../types';
 import { subDays, format } from 'date-fns';
-
-// Empty students data - no mock data
-export const mockStudents: Student[] = [];
+import { getAllStudents, convertDatabaseStudentToAppStudent } from './studentDatabase';
 
 // Get today's date in YYYY-MM-DD format
 export const getTodayDateString = () => format(new Date(), 'yyyy-MM-dd');
 
-// Get students by classroom
-export const getStudentsByClassroom = (classroom: string): Student[] => {
-  return mockStudents.filter(student => student.classroom === classroom);
+// Get students by classroom from database
+export const getStudentsByClassroom = async (classroom: string): Promise<Student[]> => {
+  try {
+    const { getStudentsByClassroom: getDbStudentsByClassroom } = await import('./studentDatabase');
+    const dbStudents = await getDbStudentsByClassroom(classroom);
+    return dbStudents.map(convertDatabaseStudentToAppStudent);
+  } catch (error) {
+    console.error('Error fetching students by classroom:', error);
+    return [];
+  }
+};
+
+// Get all students from database
+export const getAllStudentsFromDb = async (): Promise<Student[]> => {
+  try {
+    const dbStudents = await getAllStudents();
+    return dbStudents.map(convertDatabaseStudentToAppStudent);
+  } catch (error) {
+    console.error('Error fetching all students:', error);
+    return [];
+  }
 };
 
 // Get attendance statistics
-export const getAttendanceStats = () => {
+export const getAttendanceStats = async () => {
   const today = getTodayDateString();
-  const totalStudents = mockStudents.length;
+  const students = await getAllStudentsFromDb();
+  const totalStudents = students.length;
   
   let presentToday = 0;
   let absentToday = 0;
   
-  mockStudents.forEach(student => {
+  students.forEach(student => {
     const todayRecord = student.attendanceRecords.find(record => record.date === today);
     if (todayRecord?.status === 'present') {
       presentToday++;
@@ -38,11 +55,12 @@ export const getAttendanceStats = () => {
 };
 
 // Get classroom statistics
-export const getClassroomStats = () => {
+export const getClassroomStats = async () => {
   const today = getTodayDateString();
+  const students = await getAllStudentsFromDb();
   const classroomStats: Record<string, { total: number; present: number; absent: number }> = {};
   
-  mockStudents.forEach(student => {
+  students.forEach(student => {
     const classroom = student.classroom;
     if (!classroomStats[classroom]) {
       classroomStats[classroom] = { total: 0, present: 0, absent: 0 };
@@ -62,10 +80,11 @@ export const getClassroomStats = () => {
 };
 
 // Get students with consecutive absences (4+ days)
-export const getAlertStudents = () => {
+export const getAlertStudents = async () => {
+  const students = await getAllStudentsFromDb();
   const alertStudents: { student: Student; consecutiveAbsentDays: number }[] = [];
   
-  mockStudents.forEach(student => {
+  students.forEach(student => {
     // Check last 7 days for consecutive absences
     const recentRecords = student.attendanceRecords
       .slice(-7)

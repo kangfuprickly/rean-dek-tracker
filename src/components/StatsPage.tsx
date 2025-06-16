@@ -1,13 +1,56 @@
 
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getAttendanceStats, getClassroomStats } from '@/utils/mockData';
 import { Users, UserCheck, UserX, TrendingUp } from 'lucide-react';
 
 export default function StatsPage() {
-  const { totalStudents, presentToday, absentToday } = getAttendanceStats();
-  const classroomStats = getClassroomStats();
+  const [stats, setStats] = useState({
+    totalStudents: 0,
+    presentToday: 0,
+    absentToday: 0
+  });
+  const [classroomStats, setClassroomStats] = useState<Record<string, { total: number; present: number; absent: number }>>({});
+  const [loading, setLoading] = useState(true);
   
-  const attendanceRate = totalStudents > 0 ? Math.round((presentToday / totalStudents) * 100) : 0;
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
+        const attendanceStats = await getAttendanceStats();
+        const classroomData = await getClassroomStats();
+        
+        setStats(attendanceStats);
+        setClassroomStats(classroomData);
+      } catch (error) {
+        console.error('Error fetching stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+  
+  const attendanceRate = stats.totalStudents > 0 ? Math.round((stats.presentToday / stats.totalStudents) * 100) : 0;
+
+  if (loading) {
+    return (
+      <div className="p-4 pb-20 thai-content animate-fade-in">
+        <div className="flex justify-center mb-6">
+          <img 
+            src="/lovable-uploads/7c8bfb65-dae8-4dd5-b7c2-fd80778d6c16.png" 
+            alt="โลโก้โรงเรียน TARBIA CARE" 
+            className="h-20 w-auto object-contain"
+          />
+        </div>
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-thai-blue-600"></div>
+          <span className="ml-3 text-gray-600">กำลังโหลดข้อมูล...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 pb-20 thai-content animate-fade-in">
@@ -32,7 +75,7 @@ export default function StatsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">นักเรียนทั้งหมด</p>
-                <p className="text-2xl font-bold text-thai-blue-600">{totalStudents.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-thai-blue-600">{stats.totalStudents.toLocaleString()}</p>
               </div>
               <Users className="w-8 h-8 text-thai-blue-600" />
             </div>
@@ -56,7 +99,7 @@ export default function StatsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">มาเรียนวันนี้</p>
-                <p className="text-2xl font-bold text-thai-green-600">{presentToday.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-thai-green-600">{stats.presentToday.toLocaleString()}</p>
               </div>
               <UserCheck className="w-8 h-8 text-thai-green-600" />
             </div>
@@ -68,7 +111,7 @@ export default function StatsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">ขาดเรียนวันนี้</p>
-                <p className="text-2xl font-bold text-red-600">{absentToday.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-red-600">{stats.absentToday.toLocaleString()}</p>
               </div>
               <UserX className="w-8 h-8 text-red-600" />
             </div>
@@ -77,7 +120,7 @@ export default function StatsPage() {
       </div>
 
       {/* Show message when no data */}
-      {totalStudents === 0 && (
+      {stats.totalStudents === 0 && (
         <Card className="glass-card">
           <CardContent className="text-center py-12">
             <div className="text-thai-blue-600 mb-4">
@@ -90,7 +133,7 @@ export default function StatsPage() {
       )}
 
       {/* Classroom Statistics - only show when there's data */}
-      {totalStudents > 0 && (
+      {stats.totalStudents > 0 && (
         <Card className="glass-card">
           <CardHeader>
             <CardTitle className="text-lg font-semibold text-gray-800">สถิติการขาดเรียนตามห้องเรียน</CardTitle>

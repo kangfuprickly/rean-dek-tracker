@@ -1,16 +1,19 @@
-
 import { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, Download, FileSpreadsheet, Check, X, Users } from 'lucide-react';
+import { Upload, Download, FileSpreadsheet, Check, X, Users, Trash2 } from 'lucide-react';
 import { ExcelStudentData } from '@/types';
+import * as XLSX from 'xlsx';
+import { insertStudents, deleteAllStudents, getAllStudents, DatabaseStudent } from '@/utils/studentDatabase';
 
 interface PreviewStudent {
   studentNumber: string;
   grade: string;
   classroom: string;
   fullName: string;
+  firstName: string;
+  lastName: string;
   isValid: boolean;
   errors: string[];
 }
@@ -19,6 +22,7 @@ export default function ImportPage() {
   const [previewData, setPreviewData] = useState<PreviewStudent[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [fileName, setFileName] = useState('');
+  const [existingStudents, setExistingStudents] = useState<DatabaseStudent[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -26,10 +30,10 @@ export default function ImportPage() {
     const errors: string[] = [];
     let isValid = true;
 
-    const studentNumber = data['เลขประจำตัว']?.toString() || '';
-    const grade = data['ชั้น']?.toString() || '';
-    const classroom = data['ห้อง']?.toString() || '';
-    const fullName = data['ชื่อ-สกุล']?.toString() || '';
+    const studentNumber = data['เลขประจำตัว']?.toString().trim() || '';
+    const grade = data['ชั้น']?.toString().trim() || '';
+    const room = data['ห้อง']?.toString().trim() || '';
+    const fullName = data['ชื่อ-สกุล']?.toString().trim() || '';
 
     if (!studentNumber) {
       errors.push('ไม่มีเลขประจำตัว');
@@ -41,7 +45,7 @@ export default function ImportPage() {
       isValid = false;
     }
 
-    if (!classroom) {
+    if (!room) {
       errors.push('ไม่มีข้อมูลห้อง');
       isValid = false;
     }
@@ -51,11 +55,23 @@ export default function ImportPage() {
       isValid = false;
     }
 
+    // Split full name into first and last name
+    const nameParts = fullName.split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+
+    if (!firstName) {
+      errors.push('ไม่สามารถแยกชื่อได้');
+      isValid = false;
+    }
+
     return {
       studentNumber,
       grade,
-      classroom: `${grade}/${classroom}`,
+      classroom: `${grade}/${room}`,
       fullName,
+      firstName,
+      lastName,
       isValid,
       errors
     };
@@ -69,19 +85,15 @@ export default function ImportPage() {
     setIsProcessing(true);
 
     try {
-      // Simulate reading Excel file
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-      // Mock Excel data - in real implementation, you would use a library like xlsx
-      const mockExcelData = [
-        { 'เลขประจำตัว': '12345', 'ชั้น': 'ม.1', 'ห้อง': '1', 'ชื่อ-สกุล': 'สมชาย ใจดี' },
-        { 'เลขประจำตัว': '12346', 'ชั้น': 'ม.1', 'ห้อง': '1', 'ชื่อ-สกุล': 'สมหญิง สุขใส' },
-        { 'เลขประจำตัว': '12347', 'ชั้น': 'ม.1', 'ห้อง': '2', 'ชื่อ-สกุล': 'วิชัย รุ่งเรือง' },
-        { 'เลขประจำตัว': '', 'ชั้น': 'ม.1', 'ห้อง': '2', 'ชื่อ-สกุล': 'อนันต์ เจริญ' }, // Invalid - missing student number
-        { 'เลขประจำตัว': '12349', 'ชั้น': '', 'ห้อง': '3', 'ชื่อ-สกุล': 'ประยุทธ์ มั่นคง' }, // Invalid - missing grade
-      ];
+      console.log('Excel data:', jsonData);
 
-      const processedData = mockExcelData.map(validateStudentData);
+      const processedData = jsonData.map(validateStudentData);
       setPreviewData(processedData);
 
       toast({
@@ -91,6 +103,7 @@ export default function ImportPage() {
       });
 
     } catch (error) {
+      console.error('Error reading Excel file:', error);
       toast({
         title: "เกิดข้อผิดพลาด! ❌",
         description: "ไม่สามารถอ่านไฟล์ได้ กรุณาตรวจสอบรูปแบบไฟล์",
@@ -115,32 +128,113 @@ export default function ImportPage() {
 
     setIsProcessing(true);
     
-    // Simulate saving to database
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    toast({
-      title: "นำเข้าข้อมูลสำเร็จ! ✅",
-      description: `เพิ่มข้อมูลนักเรียน ${validData.length} คน เข้าสู่ระบบเรียบร้อยแล้ว`,
-      duration: 3000,
-    });
+    try {
+      const studentsToInsert = validData.map(student => ({
+        student_number: student.studentNumber,
+        first_name: student.firstName,
+        last_name: student.lastName,
+        full_name: student.fullName,
+        grade: student.grade,
+        classroom: student.classroom
+      }));
 
-    // Reset form
-    setPreviewData([]);
-    setFileName('');
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      await insertStudents(studentsToInsert);
+      
+      toast({
+        title: "นำเข้าข้อมูลสำเร็จ! ✅",
+        description: `เพิ่มข้อมูลนักเรียน ${validData.length} คน เข้าสู่ระบบเรียบร้อยแล้ว`,
+        duration: 3000,
+      });
+
+      // Reset form
+      setPreviewData([]);
+      setFileName('');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      
+      // Refresh existing students list
+      await loadExistingStudents();
+      
+    } catch (error: any) {
+      console.error('Error inserting students:', error);
+      
+      let errorMessage = "เกิดข้อผิดพลาดในการบันทึกข้อมูล";
+      if (error.code === '23505') {
+        errorMessage = "มีเลขประจำตัวนักเรียนซ้ำในระบบ กรุณาตรวจสอบข้อมูล";
+      }
+      
+      toast({
+        title: "เกิดข้อผิดพลาด! ❌",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
     }
-    setIsProcessing(false);
+  };
+
+  const loadExistingStudents = async () => {
+    try {
+      const students = await getAllStudents();
+      setExistingStudents(students);
+    } catch (error) {
+      console.error('Error loading existing students:', error);
+    }
+  };
+
+  const handleDeleteAllStudents = async () => {
+    if (!confirm('คุณแน่ใจหรือไม่ที่จะลบข้อมูลนักเรียนทั้งหมด? การกระทำนี้ไม่สามารถย้อนกลับได้')) {
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      await deleteAllStudents();
+      toast({
+        title: "ลบข้อมูลสำเร็จ! 🗑️",
+        description: "ลบข้อมูลนักเรียนทั้งหมดเรียบร้อยแล้ว",
+        duration: 3000,
+      });
+      
+      await loadExistingStudents();
+    } catch (error) {
+      console.error('Error deleting students:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด! ❌",
+        description: "ไม่สามารถลบข้อมูลได้",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const downloadTemplate = () => {
-    // In real implementation, you would generate and download an actual Excel file
+    // Create sample data
+    const sampleData = [
+      { 'เลขประจำตัว': '12345', 'ชั้น': 'ม.1', 'ห้อง': '1', 'ชื่อ-สกุล': 'สมชาย ใจดี' },
+      { 'เลขประจำตัว': '12346', 'ชั้น': 'ม.1', 'ห้อง': '1', 'ชื่อ-สกุล': 'สมหญิง สุขใส' },
+      { 'เลขประจำตัว': '12347', 'ชั้น': 'ม.2', 'ห้อง': '2', 'ชื่อ-สกุล': 'วิชัย รุ่งเรือง' },
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(sampleData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'รายชื่อนักเรียน');
+    
+    XLSX.writeFile(wb, 'ตัวอย่างรายชื่อนักเรียน.xlsx');
+    
     toast({
       title: "ดาวน์โหลดไฟล์ตัวอย่าง 📥",
-      description: "กำลังดาวน์โหลดไฟล์ตัวอย่างสำหรับกรอกข้อมูลนักเรียน",
+      description: "ดาวน์โหลดไฟล์ตัวอย่างเรียบร้อยแล้ว",
       duration: 3000,
     });
   };
+
+  // Load existing students on component mount
+  useState(() => {
+    loadExistingStudents();
+  });
 
   const validCount = previewData.filter(item => item.isValid).length;
   const invalidCount = previewData.length - validCount;
@@ -151,6 +245,35 @@ export default function ImportPage() {
         <h1 className="text-2xl font-bold text-gray-800 mb-2">นำเข้ารายชื่อนักเรียนจาก Excel</h1>
         <p className="text-gray-600">อัปโหลดไฟล์ Excel เพื่อเพิ่มข้อมูลนักเรียนจำนวนมากพร้อมกัน</p>
       </div>
+
+      {/* Existing Students Summary */}
+      {existingStudents.length > 0 && (
+        <Card className="glass-card mb-6">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+              <Users className="w-5 h-5 text-thai-blue-600" />
+              ข้อมูลนักเรียนในระบบ
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-2xl font-bold text-thai-blue-600">{existingStudents.length.toLocaleString()}</p>
+                <p className="text-sm text-gray-600">นักเรียนทั้งหมดในระบบ</p>
+              </div>
+              <Button 
+                onClick={handleDeleteAllStudents}
+                disabled={isProcessing}
+                variant="destructive"
+                size="sm"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                ลบข้อมูลทั้งหมด
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Template Download */}
       <Card className="glass-card mb-6">
