@@ -1,12 +1,50 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import { useState } from 'react';
+import BottomNavigation from '@/components/BottomNavigation';
+import StatsPage from '@/components/StatsPage';
+import AttendancePage from '@/components/AttendancePage';
+import AlertsPage from '@/components/AlertsPage';
+import ImportPage from '@/components/ImportPage';
 
 const Index = () => {
+  const [activeTab, setActiveTab] = useState('stats');
+
+  const renderCurrentPage = () => {
+    switch (activeTab) {
+      case 'stats':
+        return <StatsPage />;
+      case 'attendance':
+        return <AttendancePage />;
+      case 'alerts':
+        return <AlertsPage />;
+      case 'import':
+        return <ImportPage />;
+      default:
+        return <StatsPage />;
+    }
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+    <div className="min-h-screen bg-gradient-to-br from-thai-blue-50 to-thai-green-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
+        <div className="max-w-md mx-auto px-4 py-4">
+          <h1 className="text-xl font-bold text-center text-gray-800">
+            ระบบติดตามการมาเรียนของนักเรียน
+          </h1>
+        </div>
       </div>
+
+      {/* Main Content */}
+      <div className="max-w-md mx-auto min-h-screen">
+        {renderCurrentPage()}
+      </div>
+
+      {/* Bottom Navigation */}
+      <BottomNavigation 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab} 
+      />
     </div>
   );
 };

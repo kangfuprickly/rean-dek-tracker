@@ -1,0 +1,197 @@
+
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useToast } from '@/hooks/use-toast';
+import { getStudentsByClassroom, getTodayDateString } from '@/utils/mockData';
+import { GRADE_CLASSROOMS, Grade, Student } from '@/types';
+import { CheckSquare, Users, Save } from 'lucide-react';
+
+export default function AttendancePage() {
+  const [selectedGrade, setSelectedGrade] = useState<Grade | ''>('');
+  const [selectedClassroom, setSelectedClassroom] = useState('');
+  const [students, setStudents] = useState<Student[]>([]);
+  const [attendanceData, setAttendanceData] = useState<Record<string, boolean>>({});
+  const [isLoading, setSaveLoading] = useState(false);
+  const { toast } = useToast();
+
+  const handleGradeChange = (grade: Grade) => {
+    setSelectedGrade(grade);
+    setSelectedClassroom('');
+    setStudents([]);
+    setAttendanceData({});
+  };
+
+  const handleClassroomChange = (classroom: string) => {
+    setSelectedClassroom(classroom);
+    const classroomStudents = getStudentsByClassroom(classroom);
+    setStudents(classroomStudents);
+    
+    // Initialize attendance data - default to present (true)
+    const initialAttendance: Record<string, boolean> = {};
+    classroomStudents.forEach(student => {
+      // Check if student was present today from mock data
+      const todayRecord = student.attendanceRecords.find(
+        record => record.date === getTodayDateString()
+      );
+      initialAttendance[student.id] = todayRecord?.status === 'present';
+    });
+    setAttendanceData(initialAttendance);
+  };
+
+  const handleAttendanceChange = (studentId: string, isPresent: boolean) => {
+    setAttendanceData(prev => ({
+      ...prev,
+      [studentId]: isPresent
+    }));
+  };
+
+  const handleSave = async () => {
+    if (students.length === 0) return;
+    
+    setSaveLoading(true);
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const presentCount = Object.values(attendanceData).filter(Boolean).length;
+    const absentCount = students.length - presentCount;
+    
+    toast({
+      title: "บันทึกสำเร็จ! ✅",
+      description: `บันทึกการเช็คชื่อ ${selectedClassroom} เรียบร้อยแล้ว\nมาเรียน: ${presentCount} คน, ขาดเรียน: ${absentCount} คน`,
+      duration: 3000,
+    });
+    
+    setSaveLoading(false);
+  };
+
+  const presentCount = Object.values(attendanceData).filter(Boolean).length;
+  const absentCount = students.length - presentCount;
+
+  return (
+    <div className="p-4 pb-20 thai-content animate-fade-in">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">เช็คการมาเรียนของนักเรียน</h1>
+        <p className="text-gray-600">วันที่ {new Date().toLocaleDateString('th-TH')}</p>
+      </div>
+
+      {/* Grade and Classroom Selection */}
+      <Card className="glass-card mb-6">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+            <CheckSquare className="w-5 h-5 text-thai-blue-600" />
+            เลือกห้องเรียน
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">ระดับชั้น</label>
+            <Select value={selectedGrade} onValueChange={handleGradeChange}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="เลือกระดับชั้น" />
+              </SelectTrigger>
+              <SelectContent className="bg-white z-50">
+                {Object.keys(GRADE_CLASSROOMS).map((grade) => (
+                  <SelectItem key={grade} value={grade}>
+                    {grade}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedGrade && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">ห้องเรียน</label>
+              <Select value={selectedClassroom} onValueChange={handleClassroomChange}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="เลือกห้องเรียน" />
+                </SelectTrigger>
+                <SelectContent className="bg-white z-50">
+                  {GRADE_CLASSROOMS[selectedGrade].map((classroom) => (
+                    <SelectItem key={classroom} value={classroom}>
+                      {classroom}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Student List */}
+      {students.length > 0 && (
+        <>
+          <Card className="glass-card mb-6">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                <Users className="w-5 h-5 text-thai-green-600" />
+                รายชื่อนักเรียน {selectedClassroom}
+              </CardTitle>
+              <div className="flex gap-4 text-sm text-gray-600">
+                <span className="text-thai-green-600">มาเรียน: {presentCount} คน</span>
+                <span className="text-red-600">ขาดเรียน: {absentCount} คน</span>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {students.map((student, index) => (
+                  <div key={student.id} className="bg-white rounded-lg p-4 border border-gray-100">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-gray-500 font-mono w-8">
+                            {(index + 1).toString().padStart(2, '0')}
+                          </span>
+                          <div>
+                            <p className="font-medium text-gray-800">
+                              {student.firstName} {student.lastName}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              เลขประจำตัว: {student.studentNumber}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <Checkbox
+                            checked={attendanceData[student.id] === true}
+                            onCheckedChange={() => handleAttendanceChange(student.id, true)}
+                          />
+                          <span className="text-sm text-thai-green-600 font-medium">มาเรียน</span>
+                        </label>
+                        
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <Checkbox
+                            checked={attendanceData[student.id] === false}
+                            onCheckedChange={() => handleAttendanceChange(student.id, false)}
+                          />
+                          <span className="text-sm text-red-600 font-medium">ขาดเรียน</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Button 
+            onClick={handleSave}
+            disabled={isLoading}
+            className="w-full bg-thai-blue-600 hover:bg-thai-blue-700 text-white py-3 text-lg rounded-xl"
+          >
+            <Save className="w-5 h-5 mr-2" />
+            {isLoading ? 'กำลังบันทึก...' : 'บันทึกการเช็คชื่อ'}
+          </Button>
+        </>
+      )}
+    </div>
+  );
+}
