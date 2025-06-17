@@ -7,6 +7,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { getStudentsByClassroom, getTodayDateString } from '@/utils/mockData';
+import { insertAttendanceRecord, updateAttendanceRecord, getAttendanceRecordsByDate } from '@/utils/attendanceDatabase';
 import { GRADE_CLASSROOMS, Grade, Student } from '@/types';
 import { CheckSquare, Users, Save } from 'lucide-react';
 
@@ -15,6 +16,7 @@ export default function AttendancePage() {
   const [selectedClassroom, setSelectedClassroom] = useState('');
   const [students, setStudents] = useState<Student[]>([]);
   const [attendanceData, setAttendanceData] = useState<Record<string, boolean>>({});
+  const [existingRecords, setExistingRecords] = useState<Record<string, string>>({});
   const [isLoading, setSaveLoading] = useState(false);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
   const { toast } = useToast();
@@ -24,6 +26,7 @@ export default function AttendancePage() {
     setSelectedClassroom('');
     setStudents([]);
     setAttendanceData({});
+    setExistingRecords({});
   };
 
   const handleClassroomChange = async (classroom: string) => {
@@ -34,12 +37,26 @@ export default function AttendancePage() {
       const classroomStudents = await getStudentsByClassroom(classroom);
       setStudents(classroomStudents);
       
-      // Initialize attendance data - default to present (true) for all students
+      // Check existing attendance records for today
+      const today = getTodayDateString();
+      const todayRecords = await getAttendanceRecordsByDate(today);
+      
+      // Initialize attendance data and track existing records
       const initialAttendance: Record<string, boolean> = {};
+      const recordIds: Record<string, string> = {};
+      
       classroomStudents.forEach(student => {
-        initialAttendance[student.id] = true; // Default to present
+        const existingRecord = todayRecords.find(record => record.student_id === student.id);
+        if (existingRecord) {
+          initialAttendance[student.id] = existingRecord.status === 'present';
+          recordIds[student.id] = existingRecord.id;
+        } else {
+          initialAttendance[student.id] = true; // Default to present
+        }
       });
+      
       setAttendanceData(initialAttendance);
+      setExistingRecords(recordIds);
     } catch (error) {
       console.error('Error loading students:', error);
       toast({
@@ -64,19 +81,50 @@ export default function AttendancePage() {
     
     setSaveLoading(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const presentCount = Object.values(attendanceData).filter(Boolean).length;
-    const absentCount = students.length - presentCount;
-    
-    toast({
-      title: "บันทึกสำเร็จ! ✅",
-      description: `บันทึกการเช็คชื่อ ${selectedClassroom} เรียบร้อยแล้ว\nมาเรียน: ${presentCount} คน, ขาดเรียน: ${absentCount} คน`,
-      duration: 3000,
-    });
-    
-    setSaveLoading(false);
+    try {
+      const today = getTodayDateString();
+      
+      // Save attendance records to database
+      for (const student of students) {
+        const isPresent = attendanceData[student.id];
+        const status = isPresent ? 'present' : 'absent';
+        const existingRecordId = existingRecords[student.id];
+        
+        if (existingRecordId) {
+          // Update existing record
+          await updateAttendanceRecord(existingRecordId, { status });
+        } else {
+          // Create new record
+          await insertAttendanceRecord({
+            student_id: student.id,
+            date: today,
+            status
+          });
+        }
+      }
+      
+      const presentCount = Object.values(attendanceData).filter(Boolean).length;
+      const absentCount = students.length - presentCount;
+      
+      toast({
+        title: "บันทึกสำเร็จ! ✅",
+        description: `บันทึกการเช็คชื่อ ${selectedClassroom} เรียบร้อยแล้ว\nมาเรียน: ${presentCount} คน, ขาดเรียน: ${absentCount} คน`,
+        duration: 3000,
+      });
+      
+      // Refresh the data to get updated records
+      await handleClassroomChange(selectedClassroom);
+      
+    } catch (error) {
+      console.error('Error saving attendance:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถบันทึกข้อมูลการเข้าเรียนได้",
+        duration: 3000,
+      });
+    } finally {
+      setSaveLoading(false);
+    }
   };
 
   const presentCount = Object.values(attendanceData).filter(Boolean).length;
@@ -177,6 +225,11 @@ export default function AttendancePage() {
                             <p className="text-sm text-gray-600">
                               เลขประจำตัว: {student.studentNumber}
                             </p>
+                            {existingRecords[student.id] && (
+                              <p className="text-xs text-blue-600">
+                                ✓ มีข้อมูลการเข้าเรียนแล้ว
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>

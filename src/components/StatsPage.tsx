@@ -1,8 +1,9 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { getAttendanceStats, getClassroomStats } from '@/utils/mockData';
-import { Users, UserCheck, UserX, TrendingUp } from 'lucide-react';
+import { Users, UserCheck, UserX, TrendingUp, RefreshCw } from 'lucide-react';
 
 export default function StatsPage() {
   const [stats, setStats] = useState({
@@ -12,25 +13,43 @@ export default function StatsPage() {
   });
   const [classroomStats, setClassroomStats] = useState<Record<string, { total: number; present: number; absent: number }>>({});
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
+  const fetchStats = async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
         setLoading(true);
-        const attendanceStats = await getAttendanceStats();
-        const classroomData = await getClassroomStats();
-        
-        setStats(attendanceStats);
-        setClassroomStats(classroomData);
-      } catch (error) {
-        console.error('Error fetching stats:', error);
-      } finally {
-        setLoading(false);
       }
-    };
+      
+      const attendanceStats = await getAttendanceStats();
+      const classroomData = await getClassroomStats();
+      
+      setStats(attendanceStats);
+      setClassroomStats(classroomData);
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
+  useEffect(() => {
     fetchStats();
+    
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(() => {
+      fetchStats(true);
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
+
+  const handleRefresh = () => {
+    fetchStats(true);
+  };
   
   const attendanceRate = stats.totalStudents > 0 ? Math.round((stats.presentToday / stats.totalStudents) * 100) : 0;
 
@@ -63,9 +82,21 @@ export default function StatsPage() {
         />
       </div>
 
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">สถิติการมาเรียน</h1>
-        <p className="text-gray-600">ข้อมูล ณ วันที่ {new Date().toLocaleDateString('th-TH')}</p>
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">สถิติการมาเรียน</h1>
+          <p className="text-gray-600">ข้อมูล ณ วันที่ {new Date().toLocaleDateString('th-TH')}</p>
+        </div>
+        <Button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          variant="outline"
+          size="sm"
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'กำลังอัปเดต...' : 'อัปเดต'}
+        </Button>
       </div>
 
       {/* Summary Cards */}
