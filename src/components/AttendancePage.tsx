@@ -1,17 +1,22 @@
 
 import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
-import { getStudentsByClassroom, getTodayDateString } from '@/utils/mockData';
+import { getStudentsByClassroom } from '@/utils/mockData';
 import { insertAttendanceRecord, updateAttendanceRecord, getAttendanceRecordsByDate } from '@/utils/attendanceDatabase';
 import { GRADE_CLASSROOMS, Grade, Student } from '@/types';
-import { CheckSquare, Users, Save } from 'lucide-react';
+import { CheckSquare, Users, Save, Calendar as CalendarIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function AttendancePage() {
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedGrade, setSelectedGrade] = useState<Grade | ''>('');
   const [selectedClassroom, setSelectedClassroom] = useState('');
   const [students, setStudents] = useState<Student[]>([]);
@@ -20,6 +25,19 @@ export default function AttendancePage() {
   const [isLoading, setSaveLoading] = useState(false);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
   const { toast } = useToast();
+
+  const handleDateChange = (date: Date | undefined) => {
+    if (date) {
+      setSelectedDate(date);
+      // Reset classroom data when date changes
+      setAttendanceData({});
+      setExistingRecords({});
+      // Reload students if classroom is already selected
+      if (selectedClassroom) {
+        handleClassroomChange(selectedClassroom);
+      }
+    }
+  };
 
   const handleGradeChange = (grade: Grade) => {
     setSelectedGrade(grade);
@@ -37,16 +55,16 @@ export default function AttendancePage() {
       const classroomStudents = await getStudentsByClassroom(classroom);
       setStudents(classroomStudents);
       
-      // Check existing attendance records for today
-      const today = getTodayDateString();
-      const todayRecords = await getAttendanceRecordsByDate(today);
+      // Check existing attendance records for selected date
+      const selectedDateString = format(selectedDate, 'yyyy-MM-dd');
+      const dayRecords = await getAttendanceRecordsByDate(selectedDateString);
       
       // Initialize attendance data and track existing records
       const initialAttendance: Record<string, boolean> = {};
       const recordIds: Record<string, string> = {};
       
       classroomStudents.forEach(student => {
-        const existingRecord = todayRecords.find(record => record.student_id === student.id);
+        const existingRecord = dayRecords.find(record => record.student_id === student.id);
         if (existingRecord) {
           initialAttendance[student.id] = existingRecord.status === 'present';
           recordIds[student.id] = existingRecord.id;
@@ -82,7 +100,7 @@ export default function AttendancePage() {
     setSaveLoading(true);
     
     try {
-      const today = getTodayDateString();
+      const selectedDateString = format(selectedDate, 'yyyy-MM-dd');
       
       // Save attendance records to database
       for (const student of students) {
@@ -97,7 +115,7 @@ export default function AttendancePage() {
           // Create new record
           await insertAttendanceRecord({
             student_id: student.id,
-            date: today,
+            date: selectedDateString,
             status
           });
         }
@@ -108,7 +126,7 @@ export default function AttendancePage() {
       
       toast({
         title: "บันทึกสำเร็จ! ✅",
-        description: `บันทึกการเช็คชื่อ ${selectedClassroom} เรียบร้อยแล้ว\nมาเรียน: ${presentCount} คน, ขาดเรียน: ${absentCount} คน`,
+        description: `บันทึกการเช็คชื่อ ${selectedClassroom} วันที่ ${format(selectedDate, 'dd/MM/yyyy')} เรียบร้อยแล้ว\nมาเรียน: ${presentCount} คน, ขาดเรียน: ${absentCount} คน`,
         duration: 3000,
       });
       
@@ -134,8 +152,44 @@ export default function AttendancePage() {
     <div className="p-4 pb-20 thai-content animate-fade-in">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800 mb-2">เช็คการมาเรียนของนักเรียน</h1>
-        <p className="text-gray-600">วันที่ {new Date().toLocaleDateString('th-TH')}</p>
+        <p className="text-gray-600">เลือกวันที่และห้องเรียนที่ต้องการเช็คชื่อ</p>
       </div>
+
+      {/* Date Selection */}
+      <Card className="glass-card mb-6">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+            <CalendarIcon className="w-5 h-5 text-thai-blue-600" />
+            เลือกวันที่
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !selectedDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {selectedDate ? format(selectedDate, 'dd/MM/yyyy') : <span>เลือกวันที่</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={handleDateChange}
+                initialFocus
+                className="pointer-events-auto"
+                disabled={(date) => date > new Date()} // Disable future dates
+              />
+            </PopoverContent>
+          </Popover>
+        </CardContent>
+      </Card>
 
       {/* Grade and Classroom Selection */}
       <Card className="glass-card mb-6">
@@ -206,6 +260,7 @@ export default function AttendancePage() {
               <div className="flex gap-4 text-sm text-gray-600">
                 <span className="text-thai-green-600">มาเรียน: {presentCount} คน</span>
                 <span className="text-red-600">ขาดเรียน: {absentCount} คน</span>
+                <span className="text-gray-500">วันที่: {format(selectedDate, 'dd/MM/yyyy')}</span>
               </div>
             </CardHeader>
             <CardContent>
@@ -265,7 +320,7 @@ export default function AttendancePage() {
             className="w-full bg-thai-blue-600 hover:bg-thai-blue-700 text-white py-3 text-lg rounded-xl"
           >
             <Save className="w-5 h-5 mr-2" />
-            {isLoading ? 'กำลังบันทึก...' : 'บันทึกการเช็คชื่อ'}
+            {isLoading ? 'กำลังบันทึก...' : `บันทึกการเช็คชื่อ (${format(selectedDate, 'dd/MM/yyyy')})`}
           </Button>
         </>
       )}
