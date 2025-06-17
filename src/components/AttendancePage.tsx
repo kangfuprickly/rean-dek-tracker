@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -268,24 +267,19 @@ export default function AttendancePage() {
                 {students.map((student, index) => (
                   <div key={student.id} className="bg-white rounded-lg p-4 border border-gray-100">
                     <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm text-gray-500 font-mono w-8">
-                            {(index + 1).toString().padStart(2, '0')}
-                          </span>
-                          <div>
-                            <p className="font-medium text-gray-800">
-                              {student.firstName} {student.lastName}
+                      <div className="flex items-center gap-3 flex-1">
+                        <span className="text-sm text-gray-500 font-mono w-8">
+                          {(index + 1).toString().padStart(2, '0')}
+                        </span>
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-800 text-lg">
+                            {student.firstName} {student.lastName}
+                          </p>
+                          {existingRecords[student.id] && (
+                            <p className="text-xs text-blue-600 mt-1">
+                              ✓ มีข้อมูลการเข้าเรียนแล้ว
                             </p>
-                            <p className="text-sm text-gray-600">
-                              เลขประจำตัว: {student.studentNumber}
-                            </p>
-                            {existingRecords[student.id] && (
-                              <p className="text-xs text-blue-600">
-                                ✓ มีข้อมูลการเข้าเรียนแล้ว
-                              </p>
-                            )}
-                          </div>
+                          )}
                         </div>
                       </div>
                       
