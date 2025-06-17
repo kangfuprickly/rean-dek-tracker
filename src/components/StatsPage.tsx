@@ -23,11 +23,15 @@ export default function StatsPage() {
         setLoading(true);
       }
       
-      const attendanceStats = await getAttendanceStats();
-      const classroomData = await getClassroomStats();
+      console.log('Fetching optimized stats...');
+      const [attendanceStats, classroomData] = await Promise.all([
+        getAttendanceStats(),
+        getClassroomStats()
+      ]);
       
       setStats(attendanceStats);
       setClassroomStats(classroomData);
+      console.log('Stats loaded successfully');
     } catch (error) {
       console.error('Error fetching stats:', error);
     } finally {
@@ -39,10 +43,10 @@ export default function StatsPage() {
   useEffect(() => {
     fetchStats();
     
-    // Auto-refresh every 30 seconds
+    // Auto-refresh every 60 seconds (reduced from 30 for better performance)
     const interval = setInterval(() => {
       fetchStats(true);
-    }, 30000);
+    }, 60000);
     
     return () => clearInterval(interval);
   }, []);

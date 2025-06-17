@@ -22,8 +22,10 @@ export default function AlertsPage() {
     const loadAlertStudents = async () => {
       try {
         setIsLoading(true);
+        console.log('Loading alert students with optimized query...');
         const students = await getAlertStudents();
         setAlertStudents(students);
+        console.log(`Loaded ${students.length} alert students`);
       } catch (error) {
         console.error('Error loading alert students:', error);
         setAlertStudents([]);
