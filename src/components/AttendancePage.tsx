@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { getStudentsByClassroom, getTodayDateString } from '@/utils/mockData';
 import { GRADE_CLASSROOMS, Grade, Student } from '@/types';
@@ -33,14 +34,10 @@ export default function AttendancePage() {
       const classroomStudents = await getStudentsByClassroom(classroom);
       setStudents(classroomStudents);
       
-      // Initialize attendance data - default to present (true)
+      // Initialize attendance data - default to present (true) for all students
       const initialAttendance: Record<string, boolean> = {};
       classroomStudents.forEach(student => {
-        // Check if student was present today from mock data
-        const todayRecord = student.attendanceRecords.find(
-          record => record.date === getTodayDateString()
-        );
-        initialAttendance[student.id] = todayRecord?.status === 'present';
+        initialAttendance[student.id] = true; // Default to present
       });
       setAttendanceData(initialAttendance);
     } catch (error) {
@@ -184,23 +181,24 @@ export default function AttendancePage() {
                         </div>
                       </div>
                       
-                      <div className="flex gap-4">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox
-                            checked={attendanceData[student.id] === true}
-                            onCheckedChange={() => handleAttendanceChange(student.id, true)}
-                          />
-                          <span className="text-sm text-thai-green-600 font-medium">มาเรียน</span>
-                        </label>
-                        
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox
-                            checked={attendanceData[student.id] === false}
-                            onCheckedChange={() => handleAttendanceChange(student.id, false)}
-                          />
-                          <span className="text-sm text-red-600 font-medium">ขาดเรียน</span>
-                        </label>
-                      </div>
+                      <RadioGroup
+                        value={attendanceData[student.id] ? "present" : "absent"}
+                        onValueChange={(value) => handleAttendanceChange(student.id, value === "present")}
+                        className="flex gap-6"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="present" id={`present-${student.id}`} />
+                          <Label htmlFor={`present-${student.id}`} className="text-sm text-thai-green-600 font-medium cursor-pointer">
+                            มาเรียน
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="absent" id={`absent-${student.id}`} />
+                          <Label htmlFor={`absent-${student.id}`} className="text-sm text-red-600 font-medium cursor-pointer">
+                            ขาดเรียน
+                          </Label>
+                        </div>
+                      </RadioGroup>
                     </div>
                   </div>
                 ))}
