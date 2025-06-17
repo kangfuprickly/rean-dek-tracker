@@ -20,8 +20,9 @@ export default function StudentAttendanceRow({
 }: StudentAttendanceRowProps) {
   return (
     <div className="bg-white rounded-lg p-4 border border-gray-100">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3 flex-1">
+      <div className="flex flex-col space-y-3">
+        {/* Student name section - top */}
+        <div className="flex items-center gap-3">
           <span className="text-sm text-gray-500 font-mono w-8">
             {(index + 1).toString().padStart(2, '0')}
           </span>
@@ -37,24 +38,27 @@ export default function StudentAttendanceRow({
           </div>
         </div>
         
-        <RadioGroup
-          value={isPresent ? "present" : "absent"}
-          onValueChange={(value) => onAttendanceChange(student.id, value === "present")}
-          className="flex gap-6"
-        >
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="present" id={`present-${student.id}`} />
-            <Label htmlFor={`present-${student.id}`} className="text-sm text-thai-green-600 font-medium cursor-pointer">
-              มาเรียน
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="absent" id={`absent-${student.id}`} />
-            <Label htmlFor={`absent-${student.id}`} className="text-sm text-red-600 font-medium cursor-pointer">
-              ขาดเรียน
-            </Label>
-          </div>
-        </RadioGroup>
+        {/* Attendance radio buttons - bottom */}
+        <div className="flex justify-center">
+          <RadioGroup
+            value={isPresent ? "present" : "absent"}
+            onValueChange={(value) => onAttendanceChange(student.id, value === "present")}
+            className="flex gap-8"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="present" id={`present-${student.id}`} />
+              <Label htmlFor={`present-${student.id}`} className="text-sm text-thai-green-600 font-medium cursor-pointer">
+                มาเรียน
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="absent" id={`absent-${student.id}`} />
+              <Label htmlFor={`absent-${student.id}`} className="text-sm text-red-600 font-medium cursor-pointer">
+                ขาดเรียน
+              </Label>
+            </div>
+          </RadioGroup>
+        </div>
       </div>
     </div>
   );
