@@ -1,11 +1,23 @@
 import { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, Download, FileSpreadsheet, Check, X, Users, Trash2 } from 'lucide-react';
 import { ExcelStudentData } from '@/types';
 import * as XLSX from 'xlsx';
 import { insertStudents, deleteAllStudents, getAllStudents, DatabaseStudent } from '@/utils/studentDatabase';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface PreviewStudent {
   studentNumber: string;
@@ -23,6 +35,8 @@ export default function ImportPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [fileName, setFileName] = useState('');
   const [existingStudents, setExistingStudents] = useState<DatabaseStudent[]>([]);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -183,8 +197,13 @@ export default function ImportPage() {
     }
   };
 
-  const handleDeleteAllStudents = async () => {
-    if (!confirm('คุณแน่ใจหรือไม่ที่จะลบข้อมูลนักเรียนทั้งหมด? การกระทำนี้ไม่สามารถย้อนกลับได้')) {
+  const handleDeleteConfirm = async () => {
+    if (deletePassword !== 'kangfu18') {
+      toast({
+        title: "รหัสผ่านไม่ถูกต้อง! ❌",
+        description: "กรุณากรอกรหัสผ่านที่ถูกต้อง",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -198,6 +217,8 @@ export default function ImportPage() {
       });
       
       await loadExistingStudents();
+      setShowDeleteDialog(false);
+      setDeletePassword('');
     } catch (error) {
       console.error('Error deleting students:', error);
       toast({
@@ -261,15 +282,53 @@ export default function ImportPage() {
                 <p className="text-2xl font-bold text-thai-blue-600">{existingStudents.length.toLocaleString()}</p>
                 <p className="text-sm text-gray-600">นักเรียนทั้งหมดในระบบ</p>
               </div>
-              <Button 
-                onClick={handleDeleteAllStudents}
-                disabled={isProcessing}
-                variant="destructive"
-                size="sm"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                ลบข้อมูลทั้งหมด
-              </Button>
+              
+              <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    disabled={isProcessing}
+                    variant="destructive"
+                    size="sm"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    ลบข้อมูลทั้งหมด
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>ยืนยันการลบข้อมูลทั้งหมด</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      การกระทำนี้จะลบข้อมูลนักเรียนทั้งหมด <strong>{existingStudents.length.toLocaleString()} คน</strong> ออกจากระบบ และไม่สามารถกู้คืนได้
+                      <br /><br />
+                      กรุณากรอกรหัสผ่านเพื่อยืนยันการลบข้อมูล:
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <div className="py-4">
+                    <Input
+                      type="password"
+                      placeholder="กรอกรหัสผ่าน"
+                      value={deletePassword}
+                      onChange={(e) => setDeletePassword(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => {
+                      setDeletePassword('');
+                      setShowDeleteDialog(false);
+                    }}>
+                      ยกเลิก
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDeleteConfirm}
+                      disabled={!deletePassword || isProcessing}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      {isProcessing ? 'กำลังลบ...' : 'ลบข้อมูลทั้งหมด'}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </CardContent>
         </Card>
