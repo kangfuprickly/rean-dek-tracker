@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,14 +8,32 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from '@/hooks/use-toast';
 import { getAlertStudents } from '@/utils/mockData';
 import { AlertTriangle, UserX, MessageSquare, Phone, FileText } from 'lucide-react';
+import { Student } from '@/types';
 
 export default function AlertsPage() {
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<string>('');
   const [noteText, setNoteText] = useState('');
+  const [alertStudents, setAlertStudents] = useState<{ student: Student; consecutiveAbsentDays: number }[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
-  
-  const alertStudents = getAlertStudents();
+
+  useEffect(() => {
+    const loadAlertStudents = async () => {
+      try {
+        setIsLoading(true);
+        const students = await getAlertStudents();
+        setAlertStudents(students);
+      } catch (error) {
+        console.error('Error loading alert students:', error);
+        setAlertStudents([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadAlertStudents();
+  }, []);
 
   const handleNotifyTeacher = (studentName: string) => {
     toast({
@@ -43,6 +61,21 @@ export default function AlertsPage() {
     setSelectedStudent(studentName);
     setNoteDialogOpen(true);
   };
+
+  if (isLoading) {
+    return (
+      <div className="p-4 pb-20 thai-content animate-fade-in">
+        <div className="text-center py-12">
+          <div className="text-thai-blue-600 mb-4">
+            <svg className="w-8 h-8 mx-auto animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </div>
+          <p className="text-gray-600">กำลังโหลดข้อมูล...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 pb-20 thai-content animate-fade-in">

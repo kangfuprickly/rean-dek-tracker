@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -15,6 +15,7 @@ export default function AttendancePage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [attendanceData, setAttendanceData] = useState<Record<string, boolean>>({});
   const [isLoading, setSaveLoading] = useState(false);
+  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
   const { toast } = useToast();
 
   const handleGradeChange = (grade: Grade) => {
@@ -24,21 +25,34 @@ export default function AttendancePage() {
     setAttendanceData({});
   };
 
-  const handleClassroomChange = (classroom: string) => {
+  const handleClassroomChange = async (classroom: string) => {
     setSelectedClassroom(classroom);
-    const classroomStudents = getStudentsByClassroom(classroom);
-    setStudents(classroomStudents);
+    setIsLoadingStudents(true);
     
-    // Initialize attendance data - default to present (true)
-    const initialAttendance: Record<string, boolean> = {};
-    classroomStudents.forEach(student => {
-      // Check if student was present today from mock data
-      const todayRecord = student.attendanceRecords.find(
-        record => record.date === getTodayDateString()
-      );
-      initialAttendance[student.id] = todayRecord?.status === 'present';
-    });
-    setAttendanceData(initialAttendance);
+    try {
+      const classroomStudents = await getStudentsByClassroom(classroom);
+      setStudents(classroomStudents);
+      
+      // Initialize attendance data - default to present (true)
+      const initialAttendance: Record<string, boolean> = {};
+      classroomStudents.forEach(student => {
+        // Check if student was present today from mock data
+        const todayRecord = student.attendanceRecords.find(
+          record => record.date === getTodayDateString()
+        );
+        initialAttendance[student.id] = todayRecord?.status === 'present';
+      });
+      setAttendanceData(initialAttendance);
+    } catch (error) {
+      console.error('Error loading students:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถโหลดรายชื่อนักเรียนได้",
+        duration: 3000,
+      });
+    } finally {
+      setIsLoadingStudents(false);
+    }
   };
 
   const handleAttendanceChange = (studentId: string, isPresent: boolean) => {
@@ -123,8 +137,20 @@ export default function AttendancePage() {
         </CardContent>
       </Card>
 
+      {/* Loading indicator for students */}
+      {isLoadingStudents && (
+        <div className="text-center py-12">
+          <div className="text-thai-blue-600 mb-4">
+            <svg className="w-8 h-8 mx-auto animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </div>
+          <p className="text-gray-600">กำลังโหลดรายชื่อนักเรียน...</p>
+        </div>
+      )}
+
       {/* Student List */}
-      {students.length > 0 && (
+      {students.length > 0 && !isLoadingStudents && (
         <>
           <Card className="glass-card mb-6">
             <CardHeader>
@@ -191,6 +217,20 @@ export default function AttendancePage() {
             {isLoading ? 'กำลังบันทึก...' : 'บันทึกการเช็คชื่อ'}
           </Button>
         </>
+      )}
+
+      {/* Empty state when no students in classroom */}
+      {selectedClassroom && students.length === 0 && !isLoadingStudents && (
+        <Card className="glass-card">
+          <CardContent className="text-center py-12">
+            <div className="text-gray-400 mb-4">
+              <Users className="w-16 h-16 mx-auto" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">ไม่พบรายชื่อนักเรียน</h3>
+            <p className="text-gray-600">ห้องเรียน {selectedClassroom} ยังไม่มีรายชื่อนักเรียน</p>
+            <p className="text-sm text-gray-500 mt-2">กรุณานำเข้าข้อมูลนักเรียนจากหน้า "นำเข้าข้อมูล"</p>
+          </CardContent>
+        </Card>
       )}
     </div>
   );
