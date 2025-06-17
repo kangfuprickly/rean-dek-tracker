@@ -13,15 +13,24 @@ export const getStudentsByClassroom = async (classroom: string): Promise<Student
     const { getStudentsByClassroom: getDbStudentsByClassroom } = await import('./studentDatabase');
     const dbStudents = await getDbStudentsByClassroom(classroom);
     
-    // Get attendance records for each student
-    const studentsWithAttendance = await Promise.all(
-      dbStudents.map(async (dbStudent) => {
+    console.log(`Fetched ${dbStudents.length} students for classroom ${classroom}`);
+    
+    // Get attendance records for each student in batches to avoid overwhelming the database
+    const batchSize = 50;
+    const studentsWithAttendance: Student[] = [];
+    
+    for (let i = 0; i < dbStudents.length; i += batchSize) {
+      const batch = dbStudents.slice(i, i + batchSize);
+      const batchPromises = batch.map(async (dbStudent) => {
         const attendanceRecords = await getAttendanceRecordsByStudentId(dbStudent.id);
         const appStudent = convertDatabaseStudentToAppStudent(dbStudent);
         appStudent.attendanceRecords = attendanceRecords.map(convertDatabaseAttendanceToAppAttendance);
         return appStudent;
-      })
-    );
+      });
+      
+      const batchResults = await Promise.all(batchPromises);
+      studentsWithAttendance.push(...batchResults);
+    }
     
     return studentsWithAttendance;
   } catch (error) {
@@ -34,17 +43,28 @@ export const getStudentsByClassroom = async (classroom: string): Promise<Student
 export const getAllStudentsFromDb = async (): Promise<Student[]> => {
   try {
     const dbStudents = await getAllStudents();
+    console.log(`Fetched ${dbStudents.length} total students from database`);
     
-    // Get attendance records for each student
-    const studentsWithAttendance = await Promise.all(
-      dbStudents.map(async (dbStudent) => {
+    // Get attendance records for each student in batches to improve performance
+    const batchSize = 50;
+    const studentsWithAttendance: Student[] = [];
+    
+    for (let i = 0; i < dbStudents.length; i += batchSize) {
+      const batch = dbStudents.slice(i, i + batchSize);
+      console.log(`Processing batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(dbStudents.length / batchSize)}`);
+      
+      const batchPromises = batch.map(async (dbStudent) => {
         const attendanceRecords = await getAttendanceRecordsByStudentId(dbStudent.id);
         const appStudent = convertDatabaseStudentToAppStudent(dbStudent);
         appStudent.attendanceRecords = attendanceRecords.map(convertDatabaseAttendanceToAppAttendance);
         return appStudent;
-      })
-    );
+      });
+      
+      const batchResults = await Promise.all(batchPromises);
+      studentsWithAttendance.push(...batchResults);
+    }
     
+    console.log(`Final processed students count: ${studentsWithAttendance.length}`);
     return studentsWithAttendance;
   } catch (error) {
     console.error('Error fetching all students:', error);
@@ -57,6 +77,8 @@ export const getAttendanceStats = async () => {
   const today = getTodayDateString();
   const students = await getAllStudentsFromDb();
   const totalStudents = students.length;
+  
+  console.log(`Calculating attendance stats for ${totalStudents} students`);
   
   let presentToday = 0;
   let absentToday = 0;
@@ -75,6 +97,8 @@ export const getAttendanceStats = async () => {
     }
   });
   
+  console.log(`Attendance stats: ${totalStudents} total, ${presentToday} present, ${absentToday} absent`);
+  
   return {
     totalStudents,
     presentToday,
@@ -87,6 +111,8 @@ export const getClassroomStats = async () => {
   const today = getTodayDateString();
   const students = await getAllStudentsFromDb();
   const classroomStats: Record<string, { total: number; present: number; absent: number }> = {};
+  
+  console.log(`Calculating classroom stats for ${students.length} students`);
   
   students.forEach(student => {
     const classroom = student.classroom;
@@ -103,6 +129,8 @@ export const getClassroomStats = async () => {
       classroomStats[classroom].absent++;
     }
   });
+  
+  console.log(`Classroom stats calculated for ${Object.keys(classroomStats).length} classrooms`);
   
   return classroomStats;
 };

@@ -29,33 +29,76 @@ export const insertStudents = async (students: Omit<DatabaseStudent, 'id' | 'cre
 };
 
 export const getAllStudents = async (): Promise<DatabaseStudent[]> => {
-  const { data, error } = await supabase
-    .from('students')
-    .select('*')
-    .order('classroom', { ascending: true })
-    .order('student_number', { ascending: true });
+  // Remove any limits and get all students
+  let allStudents: DatabaseStudent[] = [];
+  let from = 0;
+  const batchSize = 1000;
+  
+  while (true) {
+    const { data, error } = await supabase
+      .from('students')
+      .select('*')
+      .order('classroom', { ascending: true })
+      .order('student_number', { ascending: true })
+      .range(from, from + batchSize - 1);
 
-  if (error) {
-    console.error('Error fetching students:', error);
-    throw error;
+    if (error) {
+      console.error('Error fetching students:', error);
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      break;
+    }
+
+    allStudents = [...allStudents, ...data];
+    
+    // If we got less than the batch size, we've reached the end
+    if (data.length < batchSize) {
+      break;
+    }
+    
+    from += batchSize;
   }
 
-  return data || [];
+  console.log(`Total students fetched: ${allStudents.length}`);
+  return allStudents;
 };
 
 export const getStudentsByClassroom = async (classroom: string): Promise<DatabaseStudent[]> => {
-  const { data, error } = await supabase
-    .from('students')
-    .select('*')
-    .eq('classroom', classroom)
-    .order('student_number', { ascending: true });
+  // Remove any limits and get all students for the classroom
+  let allStudents: DatabaseStudent[] = [];
+  let from = 0;
+  const batchSize = 1000;
+  
+  while (true) {
+    const { data, error } = await supabase
+      .from('students')
+      .select('*')
+      .eq('classroom', classroom)
+      .order('student_number', { ascending: true })
+      .range(from, from + batchSize - 1);
 
-  if (error) {
-    console.error('Error fetching students by classroom:', error);
-    throw error;
+    if (error) {
+      console.error('Error fetching students by classroom:', error);
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      break;
+    }
+
+    allStudents = [...allStudents, ...data];
+    
+    // If we got less than the batch size, we've reached the end
+    if (data.length < batchSize) {
+      break;
+    }
+    
+    from += batchSize;
   }
 
-  return data || [];
+  return allStudents;
 };
 
 export const deleteAllStudents = async (): Promise<void> => {
