@@ -13,7 +13,7 @@ const navigationItems = [
     id: 'stats',
     label: 'สถิติ',
     icon: BarChart3,
-    color: 'text-thai-blue-600'
+    color: 'text-purple-600'
   },
   {
     id: 'attendance',
@@ -31,7 +31,7 @@ const navigationItems = [
     id: 'import',
     label: 'นำเข้า',
     icon: Upload,
-    color: 'text-purple-600'
+    color: 'text-indigo-600'
   }
 ];
 
@@ -50,7 +50,7 @@ export default function BottomNavigation({ activeTab, onTabChange }: BottomNavig
               className={cn(
                 "flex flex-col items-center justify-center py-2 px-3 rounded-lg transition-all duration-200",
                 isActive 
-                  ? "bg-thai-blue-50 scale-105" 
+                  ? "bg-green-50 scale-105" 
                   : "hover:bg-gray-50"
               )}
             >
