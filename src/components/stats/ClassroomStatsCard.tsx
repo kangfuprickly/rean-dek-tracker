@@ -57,25 +57,22 @@ export default function ClassroomStatsCard({ classroomStats }: ClassroomStatsCar
         <div className="space-y-3 max-h-96 overflow-y-auto">
           {sortedClassrooms.map(([classroom, stats]) => {
               // Ensure all values are valid numbers and prevent division by zero
-              const safeTotal = Math.max(1, stats.total || 0);
+              const safeTotal = Math.max(0, stats.total || 0);
               const safePresent = Math.min(Math.max(0, stats.present || 0), stats.total || 0);
               const safeAbsent = Math.max(0, (stats.total || 0) - safePresent);
               
-              // Calculate rates safely - only show if there are students
-              const presentRate = stats.total > 0 ? Math.round((safePresent / safeTotal) * 100) : 0;
-              const absentRate = stats.total > 0 ? Math.round((safeAbsent / safeTotal) * 100) : 0;
+              // Calculate rates safely - only show percentage if there are students
+              const presentRate = safeTotal > 0 ? Math.round((safePresent / safeTotal) * 100) : 0;
+              const absentRate = safeTotal > 0 ? Math.round((safeAbsent / safeTotal) * 100) : 0;
               
-              // Skip classrooms with no students
-              if (stats.total === 0) {
-                return null;
-              }
-              
+              // Show all classrooms, even those with no students
               return (
                 <div key={classroom} className="bg-white rounded-lg p-3 border border-gray-100">
                   <div className="flex justify-between items-center mb-2">
                     <span className="font-medium text-gray-800">{classroom}</span>
                     <span className="text-sm text-gray-600">
-                      {safePresent}/{stats.total || 0}
+                      {safePresent}/{safeTotal}
+                      {safeTotal === 0 && <span className="text-gray-400 ml-1">(ไม่มีนักเรียน)</span>}
                     </span>
                   </div>
                   
@@ -96,7 +93,7 @@ export default function ClassroomStatsCard({ classroomStats }: ClassroomStatsCar
                   </div>
                 </div>
               );
-            }).filter(Boolean)
+            })
           }
         </div>
       </CardContent>

@@ -2,37 +2,53 @@
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { getTodayDateString } from './attendanceStats';
+import { GRADE_CLASSROOMS } from '@/types';
 
-// Completely rewritten function to get classroom statistics with all classrooms
+// Function to get all possible classrooms from the GRADE_CLASSROOMS constant
+const getAllPossibleClassrooms = (): string[] => {
+  const allClassrooms: string[] = [];
+  Object.values(GRADE_CLASSROOMS).forEach(classrooms => {
+    allClassrooms.push(...classrooms);
+  });
+  return allClassrooms.sort((a, b) => {
+    // Sort by grade then by room number
+    const parseClassroom = (classroom: string) => {
+      const match = classroom.match(/ม\.(\d+)\/(\d+)/);
+      if (match) {
+        return { grade: parseInt(match[1]), room: parseInt(match[2]) };
+      }
+      return { grade: 0, room: 0 };
+    };
+    
+    const aData = parseClassroom(a);
+    const bData = parseClassroom(b);
+    
+    if (aData.grade !== bData.grade) {
+      return aData.grade - bData.grade;
+    }
+    return aData.room - bData.room;
+  });
+};
+
+// Updated function to get classroom statistics with all classrooms displayed
 export const getClassroomStats = async (date?: string) => {
   const targetDate = date || getTodayDateString();
   
   try {
     console.log(`[getClassroomStats] Fetching classroom stats for date: ${targetDate}`);
     
-    // Initialize classroom stats - get all actual classrooms from database first
-    const { data: allClassrooms, error: classroomError } = await supabase
-      .from('students')
-      .select('classroom')
-      .order('classroom');
+    // Get all possible classrooms from the type definition
+    const allPossibleClassrooms = getAllPossibleClassrooms();
+    console.log(`[getClassroomStats] All possible classrooms:`, allPossibleClassrooms);
 
-    if (classroomError) {
-      console.error('[getClassroomStats] Error fetching classrooms:', classroomError);
-      throw classroomError;
-    }
-
-    // Get unique classrooms that actually exist in database
-    const existingClassrooms = [...new Set(allClassrooms?.map(s => s.classroom) || [])];
-    console.log(`[getClassroomStats] Found existing classrooms:`, existingClassrooms);
-
-    // Initialize stats for all existing classrooms
+    // Initialize stats for all possible classrooms
     const classroomStats: Record<string, { total: number; present: number; absent: number }> = {};
     
-    existingClassrooms.forEach(classroom => {
+    allPossibleClassrooms.forEach(classroom => {
       classroomStats[classroom] = { total: 0, present: 0, absent: 0 };
     });
 
-    // Get student count per classroom
+    // Get student count per classroom from database
     const { data: studentCounts, error: studentError } = await supabase
       .from('students')
       .select('classroom')
@@ -43,7 +59,7 @@ export const getClassroomStats = async (date?: string) => {
       throw studentError;
     }
 
-    // Count students per classroom
+    // Count students per classroom (only for classrooms that exist in database)
     studentCounts?.forEach(student => {
       if (classroomStats[student.classroom]) {
         classroomStats[student.classroom].total++;
@@ -93,6 +109,12 @@ export const getClassroomStats = async (date?: string) => {
     return classroomStats;
   } catch (error) {
     console.error('[getClassroomStats] Error fetching classroom stats:', error);
-    return {};
+    // Return empty stats for all classrooms if there's an error
+    const allPossibleClassrooms = getAllPossibleClassrooms();
+    const emptyStats: Record<string, { total: number; present: number; absent: number }> = {};
+    allPossibleClassrooms.forEach(classroom => {
+      emptyStats[classroom] = { total: 0, present: 0, absent: 0 };
+    });
+    return emptyStats;
   }
 };
