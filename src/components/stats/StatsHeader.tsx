@@ -38,7 +38,7 @@ export default function StatsHeader({ onRefresh, refreshing, selectedDate, onDat
         </Button>
       </div>
       
-      {/* Date Selector */}
+      {/* Date Selector - moved below the header */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-2">
           เลือกวันที่เพื่อดูสถิติ
@@ -48,22 +48,22 @@ export default function StatsHeader({ onRefresh, refreshing, selectedDate, onDat
             <Button
               variant="outline"
               className={cn(
-                "w-full sm:w-auto justify-start text-left font-normal border-2 border-indigo-300 hover:border-indigo-500 hover:bg-indigo-50 focus:border-indigo-600 focus:ring-2 focus:ring-indigo-200",
+                "w-full sm:w-auto justify-start text-left font-normal border-2 border-blue-300 hover:border-blue-500 hover:bg-blue-50 focus:border-blue-600 focus:ring-2 focus:ring-blue-200",
                 "text-gray-800"
               )}
             >
-              <CalendarIcon className="mr-2 h-4 w-4 text-indigo-600" />
+              <CalendarIcon className="mr-2 h-4 w-4 text-blue-600" />
               {format(selectedDate, 'dd/MM/yyyy')}
               {isToday && <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">วันนี้</span>}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
+          <PopoverContent className="w-auto p-0 bg-white" align="start">
             <Calendar
               mode="single"
               selected={selectedDate}
               onSelect={(date) => date && onDateChange(date)}
               initialFocus
-              className="pointer-events-auto"
+              className="pointer-events-auto bg-white"
               disabled={(date) => date > new Date()}
             />
           </PopoverContent>
