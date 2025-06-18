@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { getStudentsByClassroom } from '@/utils/mockData';
-import { insertAttendanceRecord, updateAttendanceRecord, getAttendanceRecordsByDate } from '@/utils/attendanceDatabase';
+import { upsertAttendanceRecord, getAttendanceRecordsByDate } from '@/utils/attendanceDatabase';
 import { Grade, Student } from '@/types';
 import DateSelector from './attendance/DateSelector';
 import ClassroomSelector from './attendance/ClassroomSelector';
@@ -22,6 +22,7 @@ export default function AttendancePage() {
 
   const handleDateChange = (date: Date | undefined) => {
     if (date) {
+      console.log(`[AttendancePage] Date changed to: ${format(date, 'yyyy-MM-dd')}`);
       setSelectedDate(date);
       // Reset classroom data when date changes
       setAttendanceData({});
@@ -34,6 +35,7 @@ export default function AttendancePage() {
   };
 
   const handleGradeChange = (grade: Grade) => {
+    console.log(`[AttendancePage] Grade changed to: ${grade}`);
     setSelectedGrade(grade);
     setSelectedClassroom('');
     setStudents([]);
@@ -42,15 +44,18 @@ export default function AttendancePage() {
   };
 
   const handleClassroomChange = async (classroom: string) => {
+    console.log(`[AttendancePage] Classroom changed to: ${classroom}`);
     setSelectedClassroom(classroom);
     setIsLoadingStudents(true);
     
     try {
       const classroomStudents = await getStudentsByClassroom(classroom);
+      console.log(`[AttendancePage] Loaded ${classroomStudents.length} students for ${classroom}`);
       setStudents(classroomStudents);
       
       // Check existing attendance records for selected date
       const selectedDateString = format(selectedDate, 'yyyy-MM-dd');
+      console.log(`[AttendancePage] Checking attendance records for ${selectedDateString}`);
       const dayRecords = await getAttendanceRecordsByDate(selectedDateString);
       
       // Initialize attendance data and track existing records
@@ -62,15 +67,17 @@ export default function AttendancePage() {
         if (existingRecord) {
           initialAttendance[student.id] = existingRecord.status === 'present';
           recordIds[student.id] = existingRecord.id;
+          console.log(`[AttendancePage] Found existing record for ${student.firstName} ${student.lastName}: ${existingRecord.status}`);
         } else {
           initialAttendance[student.id] = true; // Default to present
+          console.log(`[AttendancePage] No existing record for ${student.firstName} ${student.lastName}, defaulting to present`);
         }
       });
       
       setAttendanceData(initialAttendance);
       setExistingRecords(recordIds);
     } catch (error) {
-      console.error('Error loading students:', error);
+      console.error('[AttendancePage] Error loading students:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
         description: "ไม่สามารถโหลดรายชื่อนักเรียนได้",
@@ -82,6 +89,7 @@ export default function AttendancePage() {
   };
 
   const handleAttendanceChange = (studentId: string, isPresent: boolean) => {
+    console.log(`[AttendancePage] Attendance changed for student ${studentId}: ${isPresent ? 'present' : 'absent'}`);
     setAttendanceData(prev => ({
       ...prev,
       [studentId]: isPresent
@@ -89,34 +97,35 @@ export default function AttendancePage() {
   };
 
   const handleSave = async () => {
-    if (students.length === 0) return;
+    if (students.length === 0) {
+      console.log('[AttendancePage] No students to save attendance for');
+      return;
+    }
     
     setSaveLoading(true);
     
     try {
       const selectedDateString = format(selectedDate, 'yyyy-MM-dd');
+      console.log(`[AttendancePage] Saving attendance for ${students.length} students on ${selectedDateString}`);
       
-      // Save attendance records to database
+      // Save attendance records to database using upsert
       for (const student of students) {
         const isPresent = attendanceData[student.id];
         const status = isPresent ? 'present' : 'absent';
-        const existingRecordId = existingRecords[student.id];
         
-        if (existingRecordId) {
-          // Update existing record
-          await updateAttendanceRecord(existingRecordId, { status });
-        } else {
-          // Create new record
-          await insertAttendanceRecord({
-            student_id: student.id,
-            date: selectedDateString,
-            status
-          });
-        }
+        console.log(`[AttendancePage] Saving ${student.firstName} ${student.lastName} as ${status} for ${selectedDateString}`);
+        
+        await upsertAttendanceRecord({
+          student_id: student.id,
+          date: selectedDateString,
+          status
+        });
       }
       
       const presentCount = Object.values(attendanceData).filter(Boolean).length;
       const absentCount = students.length - presentCount;
+      
+      console.log(`[AttendancePage] Successfully saved attendance: ${presentCount} present, ${absentCount} absent`);
       
       toast({
         title: "บันทึกสำเร็จ! ✅",
@@ -128,7 +137,7 @@ export default function AttendancePage() {
       await handleClassroomChange(selectedClassroom);
       
     } catch (error) {
-      console.error('Error saving attendance:', error);
+      console.error('[AttendancePage] Error saving attendance:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
         description: "ไม่สามารถบันทึกข้อมูลการเข้าเรียนได้",
