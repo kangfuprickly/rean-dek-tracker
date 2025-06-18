@@ -30,7 +30,7 @@ const getAllPossibleClassrooms = (): string[] => {
   });
 };
 
-// Updated function to get classroom statistics with all classrooms displayed
+// Updated function to get classroom statistics with proper attendance calculation
 export const getClassroomStats = async (date?: string) => {
   const targetDate = date || getTodayDateString();
   
@@ -69,34 +69,37 @@ export const getClassroomStats = async (date?: string) => {
     console.log(`[getClassroomStats] Student counts per classroom:`, 
       Object.fromEntries(Object.entries(classroomStats).map(([k, v]) => [k, v.total])));
 
-    // Get attendance records for the specified date with student classroom info
+    // Get ALL attendance records for the specified date with student classroom info
     const { data: attendanceRecords, error: attendanceError } = await supabase
       .from('attendance_records')
       .select(`
         status,
         students!inner(classroom)
       `)
-      .eq('date', targetDate)
-      .eq('status', 'present');
+      .eq('date', targetDate);
 
     if (attendanceError) {
       console.error('[getClassroomStats] Error fetching attendance records:', attendanceError);
       throw attendanceError;
     }
 
-    console.log(`[getClassroomStats] Found ${attendanceRecords?.length || 0} present attendance records for ${targetDate}`);
+    console.log(`[getClassroomStats] Found ${attendanceRecords?.length || 0} total attendance records for ${targetDate}`);
 
-    // Count present students per classroom
+    // Count present and absent students per classroom
     if (attendanceRecords && attendanceRecords.length > 0) {
       attendanceRecords.forEach(record => {
         const classroom = record.students.classroom;
         if (classroom && classroomStats[classroom]) {
-          classroomStats[classroom].present++;
+          if (record.status === 'present') {
+            classroomStats[classroom].present++;
+          }
+          // Note: We don't need to count 'absent' records here because 
+          // absent = total - present (some students might not have attendance records yet)
         }
       });
     }
 
-    // Calculate absent counts for each classroom
+    // Calculate absent counts for each classroom (total - present)
     Object.keys(classroomStats).forEach(classroom => {
       const stats = classroomStats[classroom];
       stats.absent = Math.max(0, stats.total - stats.present);
