@@ -69,13 +69,10 @@ export const getClassroomStats = async (date?: string) => {
     console.log(`[getClassroomStats] Student counts per classroom:`, 
       Object.fromEntries(Object.entries(classroomStats).map(([k, v]) => [k, v.total])));
 
-    // Get ALL attendance records for the specified date with student classroom info
+    // Get attendance records for the specified date
     const { data: attendanceRecords, error: attendanceError } = await supabase
       .from('attendance_records')
-      .select(`
-        status,
-        students!inner(classroom)
-      `)
+      .select('student_id, status')
       .eq('date', targetDate);
 
     if (attendanceError) {
@@ -83,18 +80,33 @@ export const getClassroomStats = async (date?: string) => {
       throw attendanceError;
     }
 
-    console.log(`[getClassroomStats] Found ${attendanceRecords?.length || 0} total attendance records for ${targetDate}`);
+    console.log(`[getClassroomStats] Found ${attendanceRecords?.length || 0} attendance records for ${targetDate}`);
 
-    // Count present and absent students per classroom
+    // If we have attendance records, get student info for those records
     if (attendanceRecords && attendanceRecords.length > 0) {
+      const studentIds = attendanceRecords.map(record => record.student_id);
+      
+      const { data: studentsWithAttendance, error: studentsError } = await supabase
+        .from('students')
+        .select('id, classroom')
+        .in('id', studentIds);
+
+      if (studentsError) {
+        console.error('[getClassroomStats] Error fetching students for attendance:', studentsError);
+        throw studentsError;
+      }
+
+      // Create a map of student_id to classroom
+      const studentClassroomMap: Record<string, string> = {};
+      studentsWithAttendance?.forEach(student => {
+        studentClassroomMap[student.id] = student.classroom;
+      });
+
+      // Count present students per classroom
       attendanceRecords.forEach(record => {
-        const classroom = record.students.classroom;
-        if (classroom && classroomStats[classroom]) {
-          if (record.status === 'present') {
-            classroomStats[classroom].present++;
-          }
-          // Note: We don't need to count 'absent' records here because 
-          // absent = total - present (some students might not have attendance records yet)
+        const classroom = studentClassroomMap[record.student_id];
+        if (classroom && classroomStats[classroom] && record.status === 'present') {
+          classroomStats[classroom].present++;
         }
       });
     }

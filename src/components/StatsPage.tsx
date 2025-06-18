@@ -58,7 +58,25 @@ export default function StatsPage() {
       fetchStats(true);
     }, 60000);
     
-    return () => clearInterval(interval);
+    // Listen for attendance updates from other components
+    const handleAttendanceUpdate = (event: CustomEvent) => {
+      console.log('Received attendance update event:', event.detail);
+      const eventDate = event.detail?.date;
+      const currentDate = format(selectedDate, 'yyyy-MM-dd');
+      
+      // Only refresh if the update is for the currently selected date
+      if (eventDate === currentDate) {
+        console.log('Refreshing stats due to attendance update');
+        fetchStats(true);
+      }
+    };
+
+    window.addEventListener('attendanceUpdated', handleAttendanceUpdate);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('attendanceUpdated', handleAttendanceUpdate);
+    };
   }, [selectedDate]);
 
   const handleRefresh = () => {

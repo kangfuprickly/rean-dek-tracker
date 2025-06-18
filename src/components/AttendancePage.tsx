@@ -9,6 +9,13 @@ import DateSelector from './attendance/DateSelector';
 import ClassroomSelector from './attendance/ClassroomSelector';
 import StudentList from './attendance/StudentList';
 
+// Define custom event for stats refresh
+declare global {
+  interface WindowEventMap {
+    'attendanceUpdated': CustomEvent;
+  }
+}
+
 export default function AttendancePage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedGrade, setSelectedGrade] = useState<Grade | ''>('');
@@ -126,6 +133,16 @@ export default function AttendancePage() {
       const absentCount = students.length - presentCount;
       
       console.log(`[AttendancePage] Successfully saved attendance: ${presentCount} present, ${absentCount} absent`);
+      
+      // Dispatch custom event to notify other components about attendance update
+      window.dispatchEvent(new CustomEvent('attendanceUpdated', {
+        detail: {
+          date: selectedDateString,
+          classroom: selectedClassroom,
+          presentCount,
+          absentCount
+        }
+      }));
       
       toast({
         title: "บันทึกสำเร็จ! ✅",
