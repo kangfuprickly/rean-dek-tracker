@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { getAlertStudents } from '@/utils/mockData';
+import { getAlertStudents } from '@/utils/alertStudents';
 import { AlertTriangle, UserX, MessageSquare, Phone, FileText } from 'lucide-react';
 import { Student } from '@/types';
 

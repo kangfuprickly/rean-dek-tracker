@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,7 @@ import { Download, Calendar as CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import * as XLSX from 'xlsx';
-import { getAttendanceDataForExport } from '@/utils/mockData';
+import { getAttendanceDataForExport } from '@/utils/exportData';
 
 export default function ExportDataCard() {
   const [startDate, setStartDate] = useState<Date>();
