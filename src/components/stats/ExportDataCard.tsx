@@ -8,7 +8,7 @@ import { Download, Calendar as CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import * as XLSX from 'xlsx';
-import { getAttendanceData } from '@/utils/mockData';
+import { getAttendanceDataForExport } from '@/utils/mockData';
 
 export default function ExportDataCard() {
   const [startDate, setStartDate] = useState<Date>();
@@ -25,44 +25,41 @@ export default function ExportDataCard() {
     try {
       console.log('Exporting data from', startDate, 'to', endDate);
       
-      // Get attendance data
-      const attendanceData = await getAttendanceData();
+      // Get real attendance data from database
+      const attendanceData = await getAttendanceDataForExport(
+        format(startDate, 'yyyy-MM-dd'),
+        format(endDate, 'yyyy-MM-dd')
+      );
       
-      // Filter data by date range
-      const filteredData = attendanceData.filter(record => {
-        const recordDate = new Date(record.date);
-        return recordDate >= startDate && recordDate <= endDate;
-      });
-
-      // Prepare data for Excel
-      const excelData = filteredData.map(record => ({
-        'วันที่': format(new Date(record.date), 'dd/MM/yyyy'),
-        'ห้องเรียน': record.classroom,
-        'รหัสนักเรียน': record.studentId,
-        'ชื่อ-นามสกุล': record.studentName,
-        'สถานะ': record.status === 'present' ? 'มาเรียน' : 'ขาดเรียน',
-        'เวลาเช็คชื่อ': record.checkInTime || '-'
-      }));
-
-      if (excelData.length === 0) {
-        alert('ไม่พบข้อมูลในช่วงวันที่ที่เลือก');
+      if (attendanceData.length === 0) {
+        alert('ไม่พบข้อมูลนักเรียนขาดเรียนในช่วงวันที่ที่เลือก');
         return;
       }
+
+      // Prepare data for Excel - only absent students
+      const excelData = attendanceData.map(record => ({
+        'วันที่': format(new Date(record.date), 'dd/MM/yyyy'),
+        'ห้องเรียน': record.classroom,
+        'รหัสนักเรียน': record.studentNumber,
+        'ชื่อ-นามสกุล': record.studentName,
+        'สถานะ': 'ขาดเรียน',
+        'หมายเหตุ': record.reason || '-'
+      }));
 
       // Create workbook and worksheet
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.json_to_sheet(excelData);
 
       // Add worksheet to workbook
-      XLSX.utils.book_append_sheet(wb, ws, 'สถิติการมาเรียน');
+      XLSX.utils.book_append_sheet(wb, ws, 'รายชื่อนักเรียนขาดเรียน');
 
       // Generate filename with date range
-      const filename = `สถิติการมาเรียน_${format(startDate, 'ddMMyyyy')}-${format(endDate, 'ddMMyyyy')}.xlsx`;
+      const filename = `รายชื่อนักเรียนขาดเรียน_${format(startDate, 'ddMMyyyy')}-${format(endDate, 'ddMMyyyy')}.xlsx`;
 
       // Save file
       XLSX.writeFile(wb, filename);
       
-      alert(`ส่งออกข้อมูลสำเร็จ! ไฟล์: ${filename}`);
+      alert(`ส่งออกข้อมูลสำเร็จ! พบนักเรียนขาดเรียน ${attendanceData.length} คน ในไฟล์: ${filename}`);
     } catch (error) {
       console.error('Export error:', error);
       alert('เกิดข้อผิดพลาดในการส่งออกข้อมูล');
@@ -76,7 +73,7 @@ export default function ExportDataCard() {
       <CardHeader>
         <CardTitle className="text-lg font-semibold text-gray-800 flex items-center gap-2">
           <Download className="w-5 h-5 text-purple-600" />
-          ส่งออกข้อมูลสถิติการมาเรียน
+          ส่งออกรายชื่อนักเรียนขาดเรียน
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -150,7 +147,7 @@ export default function ExportDataCard() {
           className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
           <Download className="mr-2 h-4 w-4" />
-          {isExporting ? 'กำลังส่งออก...' : 'ส่งออกข้อมูล Excel'}
+          {isExporting ? 'กำลังส่งออก...' : 'ส่งออกรายชื่อนักเรียนขาดเรียน'}
         </Button>
       </CardContent>
     </Card>

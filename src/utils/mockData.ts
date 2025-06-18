@@ -248,42 +248,51 @@ export const getAllStudentsFromDb = async (): Promise<Student[]> => {
   }
 };
 
-// Add new function for attendance data export
-export const getAttendanceData = async () => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  // Generate mock attendance data for the last 30 days
-  const attendanceData = [];
-  const today = new Date();
-  const classrooms = ['ป.1/1', 'ป.1/2', 'ป.2/1', 'ป.2/2', 'ป.3/1'];
-  
-  for (let i = 0; i < 30; i++) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
+// New function for real attendance data export - only absent students
+export const getAttendanceDataForExport = async (startDate: string, endDate: string) => {
+  try {
+    console.log(`Fetching absent students data from ${startDate} to ${endDate}`);
     
-    // Skip weekends
-    if (date.getDay() === 0 || date.getDay() === 6) continue;
+    // Get all attendance records in the date range where status is 'absent'
+    const { data: absentRecords } = await supabase
+      .from('attendance_records')
+      .select(`
+        date,
+        status,
+        reason,
+        student_id,
+        students!inner(
+          student_number,
+          first_name,
+          last_name,
+          classroom
+        )
+      `)
+      .eq('status', 'absent')
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date', { ascending: true })
+      .order('students(classroom)', { ascending: true });
+
+    if (!absentRecords || absentRecords.length === 0) {
+      console.log('No absent students found in the specified date range');
+      return [];
+    }
+
+    // Transform the data for export
+    const exportData = absentRecords.map(record => ({
+      date: record.date,
+      classroom: record.students.classroom,
+      studentNumber: record.students.student_number,
+      studentName: `${record.students.first_name} ${record.students.last_name}`,
+      reason: record.reason || ''
+    }));
+
+    console.log(`Found ${exportData.length} absent student records for export`);
+    return exportData;
     
-    classrooms.forEach(classroom => {
-      // Generate students for each classroom
-      const studentsPerClass = Math.floor(Math.random() * 10) + 25; // 25-35 students
-      
-      for (let j = 1; j <= studentsPerClass; j++) {
-        const studentId = `${classroom.replace('/', '')}-${j.toString().padStart(3, '0')}`;
-        const isPresent = Math.random() > 0.1; // 90% attendance rate
-        
-        attendanceData.push({
-          date: date.toISOString().split('T')[0],
-          classroom,
-          studentId,
-          studentName: `นักเรียน${classroom.replace('/', '')}-${j}`,
-          status: isPresent ? 'present' : 'absent',
-          checkInTime: isPresent ? `${7 + Math.floor(Math.random() * 2)}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}` : null
-        });
-      }
-    });
+  } catch (error) {
+    console.error('Error fetching attendance data for export:', error);
+    return [];
   }
-  
-  return attendanceData;
 };
