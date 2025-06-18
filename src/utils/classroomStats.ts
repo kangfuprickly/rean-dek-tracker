@@ -48,18 +48,38 @@ export const getClassroomStats = async (date?: string) => {
       classroomStats[classroom] = { total: 0, present: 0, absent: 0 };
     });
 
-    // Get ALL students from database without any limits
+    // Get ALL students from database in batches to handle large datasets
     console.log(`[getClassroomStats] Fetching all students from database...`);
-    const { data: allStudents, error: studentError } = await supabase
-      .from('students')
-      .select('id, classroom');
+    let allStudents: any[] = [];
+    let from = 0;
+    const batchSize = 1000;
+    
+    while (true) {
+      const { data: batchData, error: studentError } = await supabase
+        .from('students')
+        .select('id, classroom')
+        .range(from, from + batchSize - 1);
 
-    if (studentError) {
-      console.error('[getClassroomStats] Error fetching students:', studentError);
-      throw studentError;
+      if (studentError) {
+        console.error('[getClassroomStats] Error fetching students:', studentError);
+        throw studentError;
+      }
+
+      if (!batchData || batchData.length === 0) {
+        break;
+      }
+
+      allStudents = [...allStudents, ...batchData];
+      
+      // If we got less than the batch size, we've reached the end
+      if (batchData.length < batchSize) {
+        break;
+      }
+      
+      from += batchSize;
     }
 
-    console.log(`[getClassroomStats] Successfully fetched ${allStudents?.length || 0} students from database`);
+    console.log(`[getClassroomStats] Successfully fetched ${allStudents.length} students from database`);
 
     // Count students per classroom and create student-to-classroom mapping
     const studentClassroomMap: Record<string, string> = {};
@@ -81,28 +101,47 @@ export const getClassroomStats = async (date?: string) => {
     console.log(`[getClassroomStats] Student counts per classroom:`, 
       Object.fromEntries(
         Object.entries(classroomStats)
-          .filter(([_, stats]) => stats.total > 0)  // Only log classrooms with students for cleaner output
+          .filter(([_, stats]) => stats.total > 0)
           .map(([k, v]) => [k, v.total])
       )
     );
 
-    // Get ALL attendance records for the specified date without any limits
+    // Get ALL attendance records for the specified date in batches
     console.log(`[getClassroomStats] Fetching attendance records for ${targetDate}...`);
-    const { data: attendanceRecords, error: attendanceError } = await supabase
-      .from('attendance_records')
-      .select('student_id, status')
-      .eq('date', targetDate);
+    let allAttendanceRecords: any[] = [];
+    from = 0;
+    
+    while (true) {
+      const { data: batchData, error: attendanceError } = await supabase
+        .from('attendance_records')
+        .select('student_id, status')
+        .eq('date', targetDate)
+        .range(from, from + batchSize - 1);
 
-    if (attendanceError) {
-      console.error('[getClassroomStats] Error fetching attendance records:', attendanceError);
-      throw attendanceError;
+      if (attendanceError) {
+        console.error('[getClassroomStats] Error fetching attendance records:', attendanceError);
+        throw attendanceError;
+      }
+
+      if (!batchData || batchData.length === 0) {
+        break;
+      }
+
+      allAttendanceRecords = [...allAttendanceRecords, ...batchData];
+      
+      // If we got less than the batch size, we've reached the end
+      if (batchData.length < batchSize) {
+        break;
+      }
+      
+      from += batchSize;
     }
 
-    console.log(`[getClassroomStats] Successfully fetched ${attendanceRecords?.length || 0} attendance records for ${targetDate}`);
+    console.log(`[getClassroomStats] Successfully fetched ${allAttendanceRecords.length} attendance records for ${targetDate}`);
 
     // Count present students per classroom using the mapping
-    if (attendanceRecords && attendanceRecords.length > 0) {
-      attendanceRecords.forEach(record => {
+    if (allAttendanceRecords && allAttendanceRecords.length > 0) {
+      allAttendanceRecords.forEach(record => {
         const classroom = studentClassroomMap[record.student_id];
         if (classroom && classroomStats[classroom] && record.status === 'present') {
           classroomStats[classroom].present++;
