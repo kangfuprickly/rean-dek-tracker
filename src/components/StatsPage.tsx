@@ -25,25 +25,29 @@ export default function StatsPage() {
     try {
       if (isRefresh) {
         setRefreshing(true);
+        console.log('[StatsPage] Refreshing stats...');
       } else {
         setLoading(true);
+        console.log('[StatsPage] Loading stats...');
       }
       
       const dateToUse = date || selectedDate;
       const dateString = format(dateToUse, 'yyyy-MM-dd');
       
-      console.log(`Fetching stats for date: ${dateString}`);
+      console.log(`[StatsPage] Fetching stats for date: ${dateString}`);
       const [attendanceStats, classroomData] = await Promise.all([
         getAttendanceStats(dateString),
         getClassroomStats(dateString)
       ]);
       
+      console.log('[StatsPage] Received attendance stats:', attendanceStats);
+      console.log('[StatsPage] Received classroom stats:', classroomData);
+      
       setStats(attendanceStats);
       setClassroomStats(classroomData);
-      console.log('Stats loaded successfully for', dateString);
-      console.log('Classroom stats:', classroomData);
+      console.log('[StatsPage] Stats updated successfully for', dateString);
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      console.error('[StatsPage] Error fetching stats:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -51,23 +55,27 @@ export default function StatsPage() {
   };
 
   useEffect(() => {
+    console.log('[StatsPage] Component mounted, fetching initial stats');
     fetchStats();
     
     // Auto-refresh every 60 seconds (reduced from 30 for better performance)
     const interval = setInterval(() => {
+      console.log('[StatsPage] Auto-refreshing stats...');
       fetchStats(true);
     }, 60000);
     
     // Listen for attendance updates from other components
     const handleAttendanceUpdate = (event: CustomEvent) => {
-      console.log('Received attendance update event:', event.detail);
+      console.log('[StatsPage] Received attendance update event:', event.detail);
       const eventDate = event.detail?.date;
       const currentDate = format(selectedDate, 'yyyy-MM-dd');
       
       // Only refresh if the update is for the currently selected date
       if (eventDate === currentDate) {
-        console.log('Refreshing stats due to attendance update');
+        console.log('[StatsPage] Event date matches current date, refreshing stats');
         fetchStats(true);
+      } else {
+        console.log(`[StatsPage] Event date (${eventDate}) does not match current date (${currentDate}), skipping refresh`);
       }
     };
 
@@ -80,10 +88,12 @@ export default function StatsPage() {
   }, [selectedDate]);
 
   const handleRefresh = () => {
+    console.log('[StatsPage] Manual refresh triggered');
     fetchStats(true);
   };
 
   const handleDateChange = (date: Date) => {
+    console.log(`[StatsPage] Date changed to: ${format(date, 'yyyy-MM-dd')}`);
     setSelectedDate(date);
     fetchStats(false, date);
   };
@@ -94,6 +104,7 @@ export default function StatsPage() {
 
   // Show classroom stats even when total students is 0, as long as we have classroom data
   const hasClassroomData = Object.keys(classroomStats).length > 0;
+  console.log('[StatsPage] Rendering with classroom data:', hasClassroomData, 'Total classrooms:', Object.keys(classroomStats).length);
 
   return (
     <div className="p-4 pb-20 thai-content animate-fade-in">
