@@ -48,7 +48,7 @@ export const getClassroomStats = async (date?: string) => {
       classroomStats[classroom] = { total: 0, present: 0, absent: 0 };
     });
 
-    // Get student count per classroom from database
+    // Get student count per classroom from database - fetch ALL students without limit
     const { data: allStudents, error: studentError } = await supabase
       .from('students')
       .select('id, classroom')
@@ -64,16 +64,16 @@ export const getClassroomStats = async (date?: string) => {
     // Count students per classroom and create student-to-classroom mapping
     const studentClassroomMap: Record<string, string> = {};
     allStudents?.forEach(student => {
-      if (classroomStats[student.classroom]) {
+      if (student.classroom && classroomStats[student.classroom] !== undefined) {
         classroomStats[student.classroom].total++;
         studentClassroomMap[student.id] = student.classroom;
       }
     });
 
-    console.log(`[getClassroomStats] Student counts per classroom:`, 
+    console.log(`[getClassroomStats] Student counts per classroom after processing all students:`, 
       Object.fromEntries(Object.entries(classroomStats).map(([k, v]) => [k, v.total])));
 
-    // Get attendance records for the specified date
+    // Get attendance records for the specified date - fetch ALL records without limit
     const { data: attendanceRecords, error: attendanceError } = await supabase
       .from('attendance_records')
       .select('student_id, status')

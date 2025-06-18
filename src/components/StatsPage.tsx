@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { getAttendanceStats, getClassroomStats } from '@/utils/mockData';
+import { getAttendanceStats } from '@/utils/attendanceStats';
+import { getClassroomStats } from '@/utils/classroomStats';
 import SchoolLogo from './stats/SchoolLogo';
 import StatsHeader from './stats/StatsHeader';
 import AttendanceSummaryCards from './stats/AttendanceSummaryCards';
@@ -42,6 +43,7 @@ export default function StatsPage() {
       
       console.log('[StatsPage] Received attendance stats:', attendanceStats);
       console.log('[StatsPage] Received classroom stats:', classroomData);
+      console.log('[StatsPage] Number of classrooms with data:', Object.keys(classroomData).length);
       
       setStats(attendanceStats);
       setClassroomStats(classroomData);
