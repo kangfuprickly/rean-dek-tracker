@@ -5,7 +5,7 @@ import { getClassroomStats } from '@/utils/classroomStats';
 import SchoolLogo from './stats/SchoolLogo';
 import StatsHeader from './stats/StatsHeader';
 import AttendanceSummaryCards from './stats/AttendanceSummaryCards';
-import ClassroomStatsCard from './stats/ClassroomStatsCard';
+import ClassroomCheckStatusCard from './stats/ClassroomCheckStatusCard';
 import EmptyStateCard from './stats/EmptyStateCard';
 import LoadingState from './stats/LoadingState';
 import ExportDataCard from './stats/ExportDataCard';
@@ -122,9 +122,9 @@ export default function StatsPage() {
       {/* Show message when no data at all */}
       {stats.totalStudents === 0 && !hasClassroomData && <EmptyStateCard />}
 
-      {/* Classroom Statistics - show when there's classroom data */}
+      {/* Classroom Check Status - show when there's classroom data */}
       {hasClassroomData && (
-        <ClassroomStatsCard classroomStats={classroomStats} />
+        <ClassroomCheckStatusCard classroomStats={classroomStats} />
       )}
 
       {/* Export Data Section */}
