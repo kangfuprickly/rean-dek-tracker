@@ -1,3 +1,4 @@
+
 import { Student, AttendanceRecord } from '../types';
 import { subDays, format } from 'date-fns';
 import { getAllStudents, convertDatabaseStudentToAppStudent } from './studentDatabase';
@@ -93,35 +94,43 @@ export const getClassroomStats = async () => {
       .select('student_id, status')
       .eq('date', today);
 
-    // Initialize all classrooms from GRADE_CLASSROOMS with zero counts
+    // Initialize classroom stats object
     const classroomStats: Record<string, { total: number; present: number; absent: number }> = {};
     
-    // Initialize all possible classrooms
-    Object.values(GRADE_CLASSROOMS).flat().forEach(classroom => {
-      classroomStats[classroom] = { total: 0, present: 0, absent: 0 };
-    });
-
-    // Count students by classroom
+    // Count students by classroom and initialize stats
     students?.forEach(student => {
-      if (classroomStats[student.classroom]) {
-        classroomStats[student.classroom].total++;
+      if (!classroomStats[student.classroom]) {
+        classroomStats[student.classroom] = { total: 0, present: 0, absent: 0 };
       }
+      classroomStats[student.classroom].total++;
     });
 
-    // Count attendance by classroom
+    // Count attendance by classroom based on actual records
     todayRecords?.forEach(record => {
       const student = students?.find(s => s.id === record.student_id);
       if (student && classroomStats[student.classroom]) {
         if (record.status === 'present') {
           classroomStats[student.classroom].present++;
+        } else if (record.status === 'absent') {
+          classroomStats[student.classroom].absent++;
         }
       }
     });
 
-    // Calculate absent counts
+    // Calculate absent counts for classrooms with students
     Object.keys(classroomStats).forEach(classroom => {
-      classroomStats[classroom].absent = 
-        classroomStats[classroom].total - classroomStats[classroom].present;
+      const checkedStudents = classroomStats[classroom].present + classroomStats[classroom].absent;
+      // If not all students have been checked yet, assume unchecked students are absent
+      if (checkedStudents < classroomStats[classroom].total) {
+        classroomStats[classroom].absent = classroomStats[classroom].total - classroomStats[classroom].present;
+      }
+    });
+
+    // Add any classrooms from GRADE_CLASSROOMS that don't have students yet but should be shown
+    Object.values(GRADE_CLASSROOMS).flat().forEach(classroom => {
+      if (!classroomStats[classroom]) {
+        classroomStats[classroom] = { total: 0, present: 0, absent: 0 };
+      }
     });
     
     console.log(`Fast classroom stats calculated for ${Object.keys(classroomStats).length} classrooms`);
