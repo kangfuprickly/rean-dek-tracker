@@ -1,4 +1,3 @@
-
 import { Student, AttendanceRecord } from '../types';
 import { subDays, format } from 'date-fns';
 import { getAllStudents, convertDatabaseStudentToAppStudent } from './studentDatabase';
@@ -246,4 +245,44 @@ export const getAllStudentsFromDb = async (): Promise<Student[]> => {
     console.error('Error fetching all students:', error);
     return [];
   }
+};
+
+// Add new function for attendance data export
+export const getAttendanceData = async () => {
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  // Generate mock attendance data for the last 30 days
+  const attendanceData = [];
+  const today = new Date();
+  const classrooms = ['ป.1/1', 'ป.1/2', 'ป.2/1', 'ป.2/2', 'ป.3/1'];
+  
+  for (let i = 0; i < 30; i++) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    
+    // Skip weekends
+    if (date.getDay() === 0 || date.getDay() === 6) continue;
+    
+    classrooms.forEach(classroom => {
+      // Generate students for each classroom
+      const studentsPerClass = Math.floor(Math.random() * 10) + 25; // 25-35 students
+      
+      for (let j = 1; j <= studentsPerClass; j++) {
+        const studentId = `${classroom.replace('/', '')}-${j.toString().padStart(3, '0')}`;
+        const isPresent = Math.random() > 0.1; // 90% attendance rate
+        
+        attendanceData.push({
+          date: date.toISOString().split('T')[0],
+          classroom,
+          studentId,
+          studentName: `นักเรียน${classroom.replace('/', '')}-${j}`,
+          status: isPresent ? 'present' : 'absent',
+          checkInTime: isPresent ? `${7 + Math.floor(Math.random() * 2)}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}` : null
+        });
+      }
+    });
+  }
+  
+  return attendanceData;
 };
