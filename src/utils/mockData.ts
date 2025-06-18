@@ -1,3 +1,4 @@
+
 import { Student, AttendanceRecord } from '../types';
 import { subDays, format } from 'date-fns';
 import { getAllStudents, convertDatabaseStudentToAppStudent } from './studentDatabase';
@@ -41,8 +42,8 @@ export const getStudentsByClassroom = async (classroom: string): Promise<Student
 };
 
 // Optimized function to get attendance statistics without loading all student data
-export const getAttendanceStats = async () => {
-  const today = getTodayDateString();
+export const getAttendanceStats = async (date?: string) => {
+  const targetDate = date || getTodayDateString();
   
   try {
     // Get total student count directly from database
@@ -50,17 +51,17 @@ export const getAttendanceStats = async () => {
       .from('students')
       .select('*', { count: 'exact', head: true });
 
-    // Get today's attendance records directly
-    const { data: todayRecords } = await supabase
+    // Get attendance records for the specified date
+    const { data: dateRecords } = await supabase
       .from('attendance_records')
       .select('status')
-      .eq('date', today);
+      .eq('date', targetDate);
 
-    const presentToday = todayRecords?.filter(record => record.status === 'present').length || 0;
-    const recordedToday = todayRecords?.length || 0;
+    const presentToday = dateRecords?.filter(record => record.status === 'present').length || 0;
+    const recordedToday = dateRecords?.length || 0;
     const absentToday = (totalStudents || 0) - presentToday;
     
-    console.log(`Fast attendance stats: ${totalStudents} total, ${presentToday} present, ${absentToday} absent`);
+    console.log(`Fast attendance stats for ${targetDate}: ${totalStudents} total, ${presentToday} present, ${absentToday} absent`);
     
     return {
       totalStudents: totalStudents || 0,
@@ -78,8 +79,8 @@ export const getAttendanceStats = async () => {
 };
 
 // Optimized function to get classroom statistics
-export const getClassroomStats = async () => {
-  const today = getTodayDateString();
+export const getClassroomStats = async (date?: string) => {
+  const targetDate = date || getTodayDateString();
   
   try {
     // Get all students grouped by classroom
@@ -87,11 +88,11 @@ export const getClassroomStats = async () => {
       .from('students')
       .select('id, classroom');
 
-    // Get today's attendance records
-    const { data: todayRecords } = await supabase
+    // Get attendance records for the specified date
+    const { data: dateRecords } = await supabase
       .from('attendance_records')
       .select('student_id, status')
-      .eq('date', today);
+      .eq('date', targetDate);
 
     // Initialize classroom stats object
     const classroomStats: Record<string, { total: number; present: number; absent: number }> = {};
@@ -105,7 +106,7 @@ export const getClassroomStats = async () => {
     });
 
     // Count attendance by classroom based on actual records
-    todayRecords?.forEach(record => {
+    dateRecords?.forEach(record => {
       const student = students?.find(s => s.id === record.student_id);
       if (student && classroomStats[student.classroom]) {
         if (record.status === 'present') {
@@ -132,7 +133,7 @@ export const getClassroomStats = async () => {
       }
     });
     
-    console.log(`Fast classroom stats calculated for ${Object.keys(classroomStats).length} classrooms`);
+    console.log(`Fast classroom stats calculated for ${Object.keys(classroomStats).length} classrooms on ${targetDate}`);
     
     return classroomStats;
   } catch (error) {
