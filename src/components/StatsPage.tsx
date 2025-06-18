@@ -41,6 +41,7 @@ export default function StatsPage() {
       setStats(attendanceStats);
       setClassroomStats(classroomData);
       console.log('Stats loaded successfully for', dateString);
+      console.log('Classroom stats:', classroomData);
     } catch (error) {
       console.error('Error fetching stats:', error);
     } finally {
@@ -73,6 +74,9 @@ export default function StatsPage() {
     return <LoadingState />;
   }
 
+  // Show classroom stats even when total students is 0, as long as we have classroom data
+  const hasClassroomData = Object.keys(classroomStats).length > 0;
+
   return (
     <div className="p-4 pb-20 thai-content animate-fade-in">
       <SchoolLogo />
@@ -84,11 +88,11 @@ export default function StatsPage() {
       />
       <AttendanceSummaryCards stats={stats} />
       
-      {/* Show message when no data */}
-      {stats.totalStudents === 0 && <EmptyStateCard />}
+      {/* Show message when no data at all */}
+      {stats.totalStudents === 0 && !hasClassroomData && <EmptyStateCard />}
 
-      {/* Classroom Statistics - only show when there's data */}
-      {stats.totalStudents > 0 && (
+      {/* Classroom Statistics - show when there's classroom data */}
+      {hasClassroomData && (
         <ClassroomStatsCard classroomStats={classroomStats} />
       )}
 

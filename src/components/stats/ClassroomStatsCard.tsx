@@ -14,7 +14,6 @@ interface ClassroomStatsCardProps {
 export default function ClassroomStatsCard({ classroomStats }: ClassroomStatsCardProps) {
   // Sort classrooms by grade and room number
   const sortedClassrooms = Object.entries(classroomStats)
-    .filter(([_, stats]) => stats.total > 0) // Only show classrooms with students
     .sort(([a], [b]) => {
       // Extract grade and room number for proper sorting
       const parseClassroom = (classroom: string) => {
@@ -57,21 +56,18 @@ export default function ClassroomStatsCard({ classroomStats }: ClassroomStatsCar
       <CardContent>
         <div className="space-y-3 max-h-96 overflow-y-auto">
           {sortedClassrooms.map(([classroom, stats]) => {
-              // Validate stats to prevent invalid calculations
-              const safeTotal = Math.max(1, stats.total); // Ensure total is at least 1 to prevent division by zero
-              const safePresent = Math.min(stats.present, stats.total); // Ensure present doesn't exceed total
-              const safeAbsent = Math.max(0, stats.total - safePresent); // Calculate absent safely
+              // Ensure all values are valid numbers and prevent division by zero
+              const safeTotal = Math.max(1, stats.total || 0);
+              const safePresent = Math.min(Math.max(0, stats.present || 0), stats.total || 0);
+              const safeAbsent = Math.max(0, (stats.total || 0) - safePresent);
               
-              // Calculate rates safely
-              const presentRate = Math.round((safePresent / safeTotal) * 100);
-              const absentRate = Math.round((safeAbsent / safeTotal) * 100);
+              // Calculate rates safely - only show if there are students
+              const presentRate = stats.total > 0 ? Math.round((safePresent / safeTotal) * 100) : 0;
+              const absentRate = stats.total > 0 ? Math.round((safeAbsent / safeTotal) * 100) : 0;
               
-              // Check for data anomalies and log them
-              if (stats.present > stats.total) {
-                console.warn(`Data anomaly in ${classroom}: present (${stats.present}) > total (${stats.total})`);
-              }
-              if (stats.absent < 0) {
-                console.warn(`Data anomaly in ${classroom}: absent is negative (${stats.absent})`);
+              // Skip classrooms with no students
+              if (stats.total === 0) {
+                return null;
               }
               
               return (
@@ -79,14 +75,14 @@ export default function ClassroomStatsCard({ classroomStats }: ClassroomStatsCar
                   <div className="flex justify-between items-center mb-2">
                     <span className="font-medium text-gray-800">{classroom}</span>
                     <span className="text-sm text-gray-600">
-                      {safePresent}/{stats.total}
+                      {safePresent}/{stats.total || 0}
                     </span>
                   </div>
                   
                   <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
                     <div 
                       className="bg-thai-green-500 h-2 rounded-full transition-all duration-500" 
-                      style={{ width: `${Math.min(100, presentRate)}%` }}
+                      style={{ width: `${Math.min(100, Math.max(0, presentRate))}%` }}
                     ></div>
                   </div>
                   
@@ -100,7 +96,7 @@ export default function ClassroomStatsCard({ classroomStats }: ClassroomStatsCar
                   </div>
                 </div>
               );
-            })
+            }).filter(Boolean)
           }
         </div>
       </CardContent>

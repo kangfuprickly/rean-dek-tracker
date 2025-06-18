@@ -103,22 +103,36 @@ export const getAttendanceStats = async (date?: string) => {
   }
 };
 
-// Completely rewritten function to get classroom statistics with proper data handling
+// Completely rewritten function to get classroom statistics with all classrooms
 export const getClassroomStats = async (date?: string) => {
   const targetDate = date || getTodayDateString();
   
   try {
     console.log(`[getClassroomStats] Fetching classroom stats for date: ${targetDate}`);
     
-    // Initialize classroom stats with all existing classrooms
+    // Initialize classroom stats - get all actual classrooms from database first
+    const { data: allClassrooms, error: classroomError } = await supabase
+      .from('students')
+      .select('classroom')
+      .order('classroom');
+
+    if (classroomError) {
+      console.error('[getClassroomStats] Error fetching classrooms:', classroomError);
+      throw classroomError;
+    }
+
+    // Get unique classrooms that actually exist in database
+    const existingClassrooms = [...new Set(allClassrooms?.map(s => s.classroom) || [])];
+    console.log(`[getClassroomStats] Found existing classrooms:`, existingClassrooms);
+
+    // Initialize stats for all existing classrooms
     const classroomStats: Record<string, { total: number; present: number; absent: number }> = {};
     
-    // Get all classrooms from GRADE_CLASSROOMS definition to ensure we show all classrooms
-    Object.values(GRADE_CLASSROOMS).flat().forEach(classroom => {
+    existingClassrooms.forEach(classroom => {
       classroomStats[classroom] = { total: 0, present: 0, absent: 0 };
     });
 
-    // Get total student count per classroom
+    // Get student count per classroom
     const { data: studentCounts, error: studentError } = await supabase
       .from('students')
       .select('classroom')
@@ -133,9 +147,6 @@ export const getClassroomStats = async (date?: string) => {
     studentCounts?.forEach(student => {
       if (classroomStats[student.classroom]) {
         classroomStats[student.classroom].total++;
-      } else {
-        // Add classroom if not in our predefined list
-        classroomStats[student.classroom] = { total: 1, present: 0, absent: 0 };
       }
     });
 
@@ -150,7 +161,7 @@ export const getClassroomStats = async (date?: string) => {
         students!inner(classroom)
       `)
       .eq('date', targetDate)
-      .eq('status', 'present'); // Only get present records to count them
+      .eq('status', 'present');
 
     if (attendanceError) {
       console.error('[getClassroomStats] Error fetching attendance records:', attendanceError);
@@ -172,19 +183,14 @@ export const getClassroomStats = async (date?: string) => {
     // Calculate absent counts for each classroom
     Object.keys(classroomStats).forEach(classroom => {
       const stats = classroomStats[classroom];
-      stats.absent = Math.max(0, stats.total - stats.present); // Ensure absent is never negative
+      stats.absent = Math.max(0, stats.total - stats.present);
       
       console.log(`[getClassroomStats] ${classroom}: total=${stats.total}, present=${stats.present}, absent=${stats.absent}`);
     });
 
-    // Only return classrooms that have students
-    const filteredStats = Object.fromEntries(
-      Object.entries(classroomStats).filter(([_, stats]) => stats.total > 0)
-    );
+    console.log(`[getClassroomStats] Final classroom stats for ${targetDate}:`, classroomStats);
     
-    console.log(`[getClassroomStats] Final classroom stats for ${targetDate}:`, filteredStats);
-    
-    return filteredStats;
+    return classroomStats;
   } catch (error) {
     console.error('[getClassroomStats] Error fetching classroom stats:', error);
     return {};
