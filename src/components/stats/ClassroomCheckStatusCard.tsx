@@ -68,17 +68,23 @@ export default function ClassroomCheckStatusCard({ classroomStats }: ClassroomCh
       return 'no-students';
     }
     
+    // เงื่อนไขสำคัญ: หากมาเรียน = 0 และ ขาดเรียน = จำนวนนักเรียนทั้งหมด 
+    // แสดงว่ายังไม่ได้บันทึกข้อมูลการเช็คชื่อ
+    if (stats.present === 0 && stats.absent === stats.total) {
+      return 'not-checked';
+    }
+    
     const totalChecked = stats.present + stats.absent;
     
-    // If no attendance records exist, it's not checked
-    if (totalChecked === 0) {
-      return 'not-checked';
-    } else if (totalChecked === stats.total) {
+    if (totalChecked === stats.total) {
       // All students have been checked
       return 'completed';
-    } else {
+    } else if (totalChecked > 0) {
       // Partially checked
       return 'partial';
+    } else {
+      // No attendance records exist
+      return 'not-checked';
     }
   };
 
@@ -170,7 +176,8 @@ export default function ClassroomCheckStatusCard({ classroomStats }: ClassroomCh
                         </div>
                       </div>
                       
-                      {status !== 'not-checked' && status !== 'no-students' && (
+                      {/* แสดงรายละเอียดการมาเรียน/ขาดเรียน เฉพาะกรณีที่มีการเช็คชื่อแล้ว */}
+                      {status === 'completed' || status === 'partial' ? (
                         <div className="mt-3 pt-2 border-t border-gray-200/50">
                           <div className="flex justify-between text-xs">
                             <span className="text-green-600">
@@ -181,7 +188,7 @@ export default function ClassroomCheckStatusCard({ classroomStats }: ClassroomCh
                             </span>
                           </div>
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   );
                 })}
