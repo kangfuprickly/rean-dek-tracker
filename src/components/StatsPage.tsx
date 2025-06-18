@@ -7,6 +7,7 @@ import AttendanceSummaryCards from './stats/AttendanceSummaryCards';
 import ClassroomStatsCard from './stats/ClassroomStatsCard';
 import EmptyStateCard from './stats/EmptyStateCard';
 import LoadingState from './stats/LoadingState';
+import ExportDataCard from './stats/ExportDataCard';
 
 export default function StatsPage() {
   const [stats, setStats] = useState({
@@ -75,6 +76,11 @@ export default function StatsPage() {
       {stats.totalStudents > 0 && (
         <ClassroomStatsCard classroomStats={classroomStats} />
       )}
+
+      {/* Export Data Section */}
+      <div className="mt-6">
+        <ExportDataCard />
+      </div>
     </div>
   );
 }
