@@ -39,9 +39,9 @@ export const getClassroomStats = async (date?: string) => {
     
     // Get all possible classrooms from the type definition
     const allPossibleClassrooms = getAllPossibleClassrooms();
-    console.log(`[getClassroomStats] All possible classrooms:`, allPossibleClassrooms);
+    console.log(`[getClassroomStats] All possible classrooms (${allPossibleClassrooms.length}):`, allPossibleClassrooms);
 
-    // Initialize stats for all possible classrooms
+    // Initialize stats for all possible classrooms - ALWAYS return all classrooms
     const classroomStats: Record<string, { total: number; present: number; absent: number }> = {};
     
     allPossibleClassrooms.forEach(classroom => {
@@ -66,8 +66,9 @@ export const getClassroomStats = async (date?: string) => {
     if (allStudents && allStudents.length > 0) {
       allStudents.forEach(student => {
         if (student.classroom) {
-          // Initialize classroom if not exists in our stats
+          // Ensure classroom exists in our stats (should already be there)
           if (!classroomStats[student.classroom]) {
+            console.warn(`[getClassroomStats] Found student in unexpected classroom: ${student.classroom}`);
             classroomStats[student.classroom] = { total: 0, present: 0, absent: 0 };
           }
           
@@ -78,7 +79,12 @@ export const getClassroomStats = async (date?: string) => {
     }
 
     console.log(`[getClassroomStats] Student counts per classroom:`, 
-      Object.fromEntries(Object.entries(classroomStats).map(([k, v]) => [k, v.total])));
+      Object.fromEntries(
+        Object.entries(classroomStats)
+          .filter(([_, stats]) => stats.total > 0)  // Only log classrooms with students for cleaner output
+          .map(([k, v]) => [k, v.total])
+      )
+    );
 
     // Get ALL attendance records for the specified date without any limits
     console.log(`[getClassroomStats] Fetching attendance records for ${targetDate}...`);
@@ -109,11 +115,14 @@ export const getClassroomStats = async (date?: string) => {
       const stats = classroomStats[classroom];
       stats.absent = Math.max(0, stats.total - stats.present);
       
-      console.log(`[getClassroomStats] ${classroom}: total=${stats.total}, present=${stats.present}, absent=${stats.absent}`);
+      if (stats.total > 0) {
+        console.log(`[getClassroomStats] ${classroom}: total=${stats.total}, present=${stats.present}, absent=${stats.absent}`);
+      }
     });
 
-    console.log(`[getClassroomStats] Final classroom stats for ${targetDate}:`, classroomStats);
+    console.log(`[getClassroomStats] Final classroom stats for ${targetDate}: ${Object.keys(classroomStats).length} classrooms total`);
     
+    // Return ALL classrooms, including those with 0 students
     return classroomStats;
   } catch (error) {
     console.error('[getClassroomStats] Error fetching classroom stats:', error);

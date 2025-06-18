@@ -14,7 +14,7 @@ interface ClassroomCheckStatusCardProps {
 }
 
 export default function ClassroomCheckStatusCard({ classroomStats }: ClassroomCheckStatusCardProps) {
-  // Sort classrooms by grade and room number
+  // Sort classrooms by grade and room number - show ALL classrooms, including those with 0 students
   const sortedClassrooms = Object.entries(classroomStats)
     .sort(([a], [b]) => {
       // Extract grade and room number for proper sorting
@@ -33,9 +33,7 @@ export default function ClassroomCheckStatusCard({ classroomStats }: ClassroomCh
         return aData.grade - bData.grade;
       }
       return aData.room - bData.room;
-    })
-    // Only show classrooms that have students
-    .filter(([_, stats]) => stats.total > 0);
+    });
 
   if (sortedClassrooms.length === 0) {
     return (
@@ -65,13 +63,21 @@ export default function ClassroomCheckStatusCard({ classroomStats }: ClassroomCh
   }, {} as Record<string, Array<[string, ClassroomStats]>>);
 
   const getCheckStatus = (stats: ClassroomStats) => {
+    // If there are no students in the classroom, show as "no students"
+    if (stats.total === 0) {
+      return 'no-students';
+    }
+    
     const totalChecked = stats.present + stats.absent;
     
+    // If no attendance records exist, it's not checked
     if (totalChecked === 0) {
       return 'not-checked';
     } else if (totalChecked === stats.total) {
+      // All students have been checked
       return 'completed';
     } else {
+      // Partially checked
       return 'partial';
     }
   };
@@ -95,6 +101,14 @@ export default function ClassroomCheckStatusCard({ classroomStats }: ClassroomCh
           badge: `${totalChecked}/${stats.total}`,
           color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
           iconColor: 'text-yellow-600'
+        };
+      case 'no-students':
+        return {
+          icon: <X className="w-4 h-4" />,
+          text: 'ไม่มีนักเรียน',
+          badge: 'ว่าง',
+          color: 'bg-gray-100 text-gray-600 border-gray-200',
+          iconColor: 'text-gray-500'
         };
       case 'not-checked':
       default:
@@ -156,7 +170,7 @@ export default function ClassroomCheckStatusCard({ classroomStats }: ClassroomCh
                         </div>
                       </div>
                       
-                      {status !== 'not-checked' && (
+                      {status !== 'not-checked' && status !== 'no-students' && (
                         <div className="mt-3 pt-2 border-t border-gray-200/50">
                           <div className="flex justify-between text-xs">
                             <span className="text-green-600">
@@ -181,7 +195,7 @@ export default function ClassroomCheckStatusCard({ classroomStats }: ClassroomCh
           <div className="flex justify-center gap-6 text-sm">
             <div className="flex items-center gap-2">
               <Check className="w-4 h-4 text-green-600" />
-              <span className="text-gray-600">เสร็จสิ้น</span>
+              <span className="text-gray-600">เช็คแล้ว</span>
             </div>
             <div className="flex items-center gap-2">
               <Hourglass className="w-4 h-4 text-yellow-600" />

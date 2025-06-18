@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { getAttendanceStats } from '@/utils/attendanceStats';
 import { getClassroomStats } from '@/utils/classroomStats';
@@ -104,7 +103,7 @@ export default function StatsPage() {
     return <LoadingState />;
   }
 
-  // Show classroom stats even when total students is 0, as long as we have classroom data
+  // Always show classroom stats since we want to display all classrooms regardless of student count
   const hasClassroomData = Object.keys(classroomStats).length > 0;
   console.log('[StatsPage] Rendering with classroom data:', hasClassroomData, 'Total classrooms:', Object.keys(classroomStats).length);
 
@@ -119,10 +118,10 @@ export default function StatsPage() {
       />
       <AttendanceSummaryCards stats={stats} />
       
-      {/* Show message when no data at all */}
+      {/* Show message only when there's absolutely no data at all */}
       {stats.totalStudents === 0 && !hasClassroomData && <EmptyStateCard />}
 
-      {/* Classroom Check Status - show when there's classroom data */}
+      {/* Classroom Check Status - always show when there's classroom data (including empty classrooms) */}
       {hasClassroomData && (
         <ClassroomCheckStatusCard classroomStats={classroomStats} />
       )}
