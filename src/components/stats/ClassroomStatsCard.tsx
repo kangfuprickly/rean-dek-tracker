@@ -12,6 +12,43 @@ interface ClassroomStatsCardProps {
 }
 
 export default function ClassroomStatsCard({ classroomStats }: ClassroomStatsCardProps) {
+  // Sort classrooms by grade and room number
+  const sortedClassrooms = Object.entries(classroomStats)
+    .filter(([_, stats]) => stats.total > 0) // Only show classrooms with students
+    .sort(([a], [b]) => {
+      // Extract grade and room number for proper sorting
+      const parseClassroom = (classroom: string) => {
+        const match = classroom.match(/ม\.(\d+)\/(\d+)/);
+        if (match) {
+          return { grade: parseInt(match[1]), room: parseInt(match[2]) };
+        }
+        return { grade: 0, room: 0 };
+      };
+      
+      const aData = parseClassroom(a);
+      const bData = parseClassroom(b);
+      
+      if (aData.grade !== bData.grade) {
+        return aData.grade - bData.grade;
+      }
+      return aData.room - bData.room;
+    });
+
+  if (sortedClassrooms.length === 0) {
+    return (
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-gray-800">สถิติการขาดเรียนตามห้องเรียน</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center text-gray-500 py-8">
+            ไม่มีข้อมูลสถิติการเข้าเรียน
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="glass-card">
       <CardHeader>
@@ -19,10 +56,8 @@ export default function ClassroomStatsCard({ classroomStats }: ClassroomStatsCar
       </CardHeader>
       <CardContent>
         <div className="space-y-3 max-h-96 overflow-y-auto">
-          {Object.entries(classroomStats)
-            .sort(([a], [b]) => a.localeCompare(b))
-            .map(([classroom, stats]) => {
-              // Fix NaN% by checking if total is 0
+          {sortedClassrooms.map(([classroom, stats]) => {
+              // Calculate rates safely
               const absentRate = stats.total > 0 ? Math.round((stats.absent / stats.total) * 100) : 0;
               const presentRate = stats.total > 0 ? Math.round((stats.present / stats.total) * 100) : 0;
               

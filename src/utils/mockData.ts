@@ -1,3 +1,4 @@
+
 import { Student, AttendanceRecord } from '../types';
 import { subDays, format } from 'date-fns';
 import { getAllStudents, convertDatabaseStudentToAppStudent } from './studentDatabase';
@@ -102,15 +103,15 @@ export const getAttendanceStats = async (date?: string) => {
   }
 };
 
-// Fixed function to get classroom statistics with better date handling
+// Completely rewritten function to get classroom statistics with proper data handling
 export const getClassroomStats = async (date?: string) => {
   const targetDate = date || getTodayDateString();
   
   try {
     console.log(`[getClassroomStats] Fetching classroom stats for date: ${targetDate}`);
     
-    // Get all students grouped by classroom
-    const { data: students, error: studentsError } = await supabase
+    // Get all students with their classroom information
+    const { data: allStudents, error: studentsError } = await supabase
       .from('students')
       .select('id, classroom');
 
@@ -119,64 +120,71 @@ export const getClassroomStats = async (date?: string) => {
       throw studentsError;
     }
 
-    console.log(`[getClassroomStats] Found ${students?.length || 0} total students`);
-
-    // Get attendance records for the specified date
-    const { data: dateRecords, error: recordsError } = await supabase
-      .from('attendance_records')
-      .select('student_id, status')
-      .eq('date', targetDate);
-
-    if (recordsError) {
-      console.error('[getClassroomStats] Error fetching attendance records:', recordsError);
-      throw recordsError;
+    if (!allStudents || allStudents.length === 0) {
+      console.log('[getClassroomStats] No students found in database');
+      return {};
     }
 
-    console.log(`[getClassroomStats] Found ${dateRecords?.length || 0} attendance records for ${targetDate}`);
+    console.log(`[getClassroomStats] Found ${allStudents.length} total students`);
 
-    // Initialize classroom stats object
+    // Get attendance records for the specified date with student info
+    const { data: attendanceRecords, error: attendanceError } = await supabase
+      .from('attendance_records')
+      .select(`
+        student_id,
+        status,
+        students!inner(classroom)
+      `)
+      .eq('date', targetDate);
+
+    if (attendanceError) {
+      console.error('[getClassroomStats] Error fetching attendance records:', attendanceError);
+      throw attendanceError;
+    }
+
+    console.log(`[getClassroomStats] Found ${attendanceRecords?.length || 0} attendance records for ${targetDate}`);
+
+    // Initialize classroom stats with all existing classrooms
     const classroomStats: Record<string, { total: number; present: number; absent: number }> = {};
     
-    // Count students by classroom and initialize stats
-    students?.forEach(student => {
+    // Count total students per classroom
+    allStudents.forEach(student => {
       if (!classroomStats[student.classroom]) {
         classroomStats[student.classroom] = { total: 0, present: 0, absent: 0 };
       }
       classroomStats[student.classroom].total++;
     });
 
-    console.log(`[getClassroomStats] Initialized stats for ${Object.keys(classroomStats).length} classrooms`);
+    console.log(`[getClassroomStats] Initialized stats for classrooms:`, Object.keys(classroomStats));
 
-    // Count attendance by classroom based on actual records
-    dateRecords?.forEach(record => {
-      const student = students?.find(s => s.id === record.student_id);
-      if (student && classroomStats[student.classroom]) {
-        if (record.status === 'present') {
-          classroomStats[student.classroom].present++;
+    // Count present students per classroom from attendance records
+    if (attendanceRecords && attendanceRecords.length > 0) {
+      attendanceRecords.forEach(record => {
+        const classroom = record.students.classroom;
+        if (classroom && classroomStats[classroom]) {
+          if (record.status === 'present') {
+            classroomStats[classroom].present++;
+          }
         }
-        // Don't count absent records here - we'll calculate it below
-      }
-    });
+      });
+    }
 
-    // Calculate absent counts correctly for each classroom
+    // Calculate absent counts for each classroom
     Object.keys(classroomStats).forEach(classroom => {
       const stats = classroomStats[classroom];
-      // Absent = Total students - Present students (regardless of recorded absent records)
       stats.absent = stats.total - stats.present;
       
-      console.log(`[getClassroomStats] ${classroom}: ${stats.present}/${stats.total} present, ${stats.absent} absent`);
+      console.log(`[getClassroomStats] ${classroom}: total=${stats.total}, present=${stats.present}, absent=${stats.absent}`);
     });
 
-    // Add any classrooms from GRADE_CLASSROOMS that don't have students yet but should be shown
-    Object.values(GRADE_CLASSROOMS).flat().forEach(classroom => {
-      if (!classroomStats[classroom]) {
-        classroomStats[classroom] = { total: 0, present: 0, absent: 0 };
-      }
-    });
+    // Filter out classrooms with 0 students
+    const filteredStats = Object.fromEntries(
+      Object.entries(classroomStats).filter(([_, stats]) => stats.total > 0)
+    );
     
-    console.log(`[getClassroomStats] Final classroom stats calculated for ${Object.keys(classroomStats).length} classrooms on ${targetDate}`);
+    console.log(`[getClassroomStats] Final classroom stats for ${targetDate}:`, filteredStats);
     
-    return classroomStats;
+    return filteredStats;
   } catch (error) {
     console.error('[getClassroomStats] Error fetching classroom stats:', error);
     return {};
