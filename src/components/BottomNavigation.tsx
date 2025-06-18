@@ -25,7 +25,7 @@ const navigationItems = [
     id: 'alerts',
     label: 'แจ้งเตือน',
     icon: AlertTriangle,
-    color: 'text-orange-600'
+    color: 'text-red-600'
   },
   {
     id: 'import',
