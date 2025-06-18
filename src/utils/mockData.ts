@@ -3,6 +3,7 @@ import { subDays, format } from 'date-fns';
 import { getAllStudents, convertDatabaseStudentToAppStudent } from './studentDatabase';
 import { getAttendanceRecordsByDate, getAttendanceRecordsByStudentId, convertDatabaseAttendanceToAppAttendance } from './attendanceDatabase';
 import { supabase } from '@/integrations/supabase/client';
+import { GRADE_CLASSROOMS } from '../types';
 
 // Get today's date in YYYY-MM-DD format
 export const getTodayDateString = () => format(new Date(), 'yyyy-MM-dd');
@@ -92,14 +93,19 @@ export const getClassroomStats = async () => {
       .select('student_id, status')
       .eq('date', today);
 
+    // Initialize all classrooms from GRADE_CLASSROOMS with zero counts
     const classroomStats: Record<string, { total: number; present: number; absent: number }> = {};
     
-    // Initialize classroom stats
+    // Initialize all possible classrooms
+    Object.values(GRADE_CLASSROOMS).flat().forEach(classroom => {
+      classroomStats[classroom] = { total: 0, present: 0, absent: 0 };
+    });
+
+    // Count students by classroom
     students?.forEach(student => {
-      if (!classroomStats[student.classroom]) {
-        classroomStats[student.classroom] = { total: 0, present: 0, absent: 0 };
+      if (classroomStats[student.classroom]) {
+        classroomStats[student.classroom].total++;
       }
-      classroomStats[student.classroom].total++;
     });
 
     // Count attendance by classroom
