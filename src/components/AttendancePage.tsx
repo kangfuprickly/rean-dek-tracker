@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { getStudentsByClassroom } from '@/utils/mockData';
+import { getStudentsByClassroom } from '@/utils/studentQueries';
 import { upsertAttendanceRecord, getAttendanceRecordsByDate } from '@/utils/attendanceDatabase';
 import { Grade, Student } from '@/types';
 import DateSelector from './attendance/DateSelector';

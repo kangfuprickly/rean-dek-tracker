@@ -31,7 +31,9 @@ export default function ClassroomStatsCard({ classroomStats }: ClassroomStatsCar
         return aData.grade - bData.grade;
       }
       return aData.room - bData.room;
-    });
+    })
+    // Only show classrooms that have students
+    .filter(([_, stats]) => stats.total > 0);
 
   if (sortedClassrooms.length === 0) {
     return (
@@ -65,14 +67,12 @@ export default function ClassroomStatsCard({ classroomStats }: ClassroomStatsCar
               const presentRate = safeTotal > 0 ? Math.round((safePresent / safeTotal) * 100) : 0;
               const absentRate = safeTotal > 0 ? Math.round((safeAbsent / safeTotal) * 100) : 0;
               
-              // Show all classrooms, even those with no students
               return (
                 <div key={classroom} className="bg-white rounded-lg p-3 border border-gray-100">
                   <div className="flex justify-between items-center mb-2">
                     <span className="font-medium text-gray-800">{classroom}</span>
                     <span className="text-sm text-gray-600">
                       {safePresent}/{safeTotal}
-                      {safeTotal === 0 && <span className="text-gray-400 ml-1">(ไม่มีนักเรียน)</span>}
                     </span>
                   </div>
                   

@@ -48,32 +48,40 @@ export const getClassroomStats = async (date?: string) => {
       classroomStats[classroom] = { total: 0, present: 0, absent: 0 };
     });
 
-    // Get student count per classroom from database - fetch ALL students without limit
+    // Get ALL students from database without any limits
+    console.log(`[getClassroomStats] Fetching all students from database...`);
     const { data: allStudents, error: studentError } = await supabase
       .from('students')
-      .select('id, classroom')
-      .order('classroom');
+      .select('id, classroom');
 
     if (studentError) {
       console.error('[getClassroomStats] Error fetching students:', studentError);
       throw studentError;
     }
 
-    console.log(`[getClassroomStats] Found ${allStudents?.length || 0} total students in database`);
+    console.log(`[getClassroomStats] Successfully fetched ${allStudents?.length || 0} students from database`);
 
     // Count students per classroom and create student-to-classroom mapping
     const studentClassroomMap: Record<string, string> = {};
-    allStudents?.forEach(student => {
-      if (student.classroom && classroomStats[student.classroom] !== undefined) {
-        classroomStats[student.classroom].total++;
-        studentClassroomMap[student.id] = student.classroom;
-      }
-    });
+    if (allStudents && allStudents.length > 0) {
+      allStudents.forEach(student => {
+        if (student.classroom) {
+          // Initialize classroom if not exists in our stats
+          if (!classroomStats[student.classroom]) {
+            classroomStats[student.classroom] = { total: 0, present: 0, absent: 0 };
+          }
+          
+          classroomStats[student.classroom].total++;
+          studentClassroomMap[student.id] = student.classroom;
+        }
+      });
+    }
 
-    console.log(`[getClassroomStats] Student counts per classroom after processing all students:`, 
+    console.log(`[getClassroomStats] Student counts per classroom:`, 
       Object.fromEntries(Object.entries(classroomStats).map(([k, v]) => [k, v.total])));
 
-    // Get attendance records for the specified date - fetch ALL records without limit
+    // Get ALL attendance records for the specified date without any limits
+    console.log(`[getClassroomStats] Fetching attendance records for ${targetDate}...`);
     const { data: attendanceRecords, error: attendanceError } = await supabase
       .from('attendance_records')
       .select('student_id, status')
@@ -84,7 +92,7 @@ export const getClassroomStats = async (date?: string) => {
       throw attendanceError;
     }
 
-    console.log(`[getClassroomStats] Found ${attendanceRecords?.length || 0} attendance records for ${targetDate}`);
+    console.log(`[getClassroomStats] Successfully fetched ${attendanceRecords?.length || 0} attendance records for ${targetDate}`);
 
     // Count present students per classroom using the mapping
     if (attendanceRecords && attendanceRecords.length > 0) {
