@@ -178,8 +178,9 @@ export default function StatsPage() {
               {Object.entries(classroomStats)
                 .sort(([a], [b]) => a.localeCompare(b))
                 .map(([classroom, stats]) => {
-                  const absentRate = Math.round((stats.absent / stats.total) * 100);
-                  const presentRate = 100 - absentRate;
+                  // Fix NaN% by checking if total is 0
+                  const absentRate = stats.total > 0 ? Math.round((stats.absent / stats.total) * 100) : 0;
+                  const presentRate = stats.total > 0 ? Math.round((stats.present / stats.total) * 100) : 0;
                   
                   return (
                     <div key={classroom} className="bg-white rounded-lg p-3 border border-gray-100">
