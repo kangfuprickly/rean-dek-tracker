@@ -38,24 +38,20 @@ export const getAttendanceStats = async (date?: string) => {
     console.log(`[getAttendanceStats] Found ${dateRecords?.length || 0} attendance records for ${targetDate}`);
 
     const presentToday = dateRecords?.filter(record => record.status === 'present').length || 0;
-    const absentRecorded = dateRecords?.filter(record => record.status === 'absent').length || 0;
+    const absentToday = dateRecords?.filter(record => record.status === 'absent').length || 0;
     const totalRecorded = dateRecords?.length || 0;
-    
-    // Calculate absent count: total students minus present students
-    const absentToday = (totalStudents || 0) - presentToday;
     
     console.log(`[getAttendanceStats] Stats for ${targetDate}:`, {
       totalStudents: totalStudents || 0,
       presentToday,
       absentToday,
-      totalRecorded,
-      absentRecorded
+      totalRecorded
     });
     
     return {
       totalStudents: totalStudents || 0,
       presentToday,
-      absentToday,
+      absentToday, // Now only counts students actually marked as absent
     };
   } catch (error) {
     console.error('[getAttendanceStats] Error fetching attendance stats:', error);
