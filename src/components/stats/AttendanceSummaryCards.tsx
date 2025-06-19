@@ -13,10 +13,15 @@ interface AttendanceSummaryCardsProps {
 }
 
 export default function AttendanceSummaryCards({ stats }: AttendanceSummaryCardsProps) {
-  // คำนวณจากนักเรียนทั้งหมดในระบบ
+  // คำนวณจากนักเรียนทั้งหมดในระบบเป็นฐาน (Base)
   const totalChecked = stats.presentToday + stats.absentToday;
   const notCheckedYet = stats.totalStudents - totalChecked;
+  
+  // อัตราการมาเรียน = (จำนวนมาเรียน / นักเรียนทั้งหมด) * 100
   const attendanceRate = stats.totalStudents > 0 ? Math.round((stats.presentToday / stats.totalStudents) * 100) : 0;
+  
+  // เปอร์เซ็นต์ของนักเรียนที่ยังไม่ได้เช็คชื่อ
+  const notCheckedPercentage = stats.totalStudents > 0 ? Math.round((notCheckedYet / stats.totalStudents) * 100) : 0;
 
   return (
     <div className="grid grid-cols-2 gap-4 mb-6">
@@ -26,6 +31,7 @@ export default function AttendanceSummaryCards({ stats }: AttendanceSummaryCards
             <div>
               <p className="text-sm text-gray-600 mb-1">นักเรียนทั้งหมด</p>
               <p className="text-2xl font-bold text-thai-blue-600">{stats.totalStudents.toLocaleString()}</p>
+              <p className="text-xs text-gray-500">ฐานข้อมูลทั้งระบบ</p>
             </div>
             <Users className="w-8 h-8 text-thai-blue-600" />
           </div>
@@ -51,6 +57,9 @@ export default function AttendanceSummaryCards({ stats }: AttendanceSummaryCards
             <div>
               <p className="text-sm text-gray-600 mb-1">มาเรียนวันนี้</p>
               <p className="text-2xl font-bold text-thai-green-600">{stats.presentToday.toLocaleString()}</p>
+              <p className="text-xs text-gray-500">
+                {stats.totalStudents > 0 ? Math.round((stats.presentToday / stats.totalStudents) * 100) : 0}% ของทั้งหมด
+              </p>
             </div>
             <UserCheck className="w-8 h-8 text-thai-green-600" />
           </div>
@@ -63,6 +72,9 @@ export default function AttendanceSummaryCards({ stats }: AttendanceSummaryCards
             <div>
               <p className="text-sm text-gray-600 mb-1">ขาดเรียนวันนี้</p>
               <p className="text-2xl font-bold text-red-600">{stats.absentToday.toLocaleString()}</p>
+              <p className="text-xs text-gray-500">
+                {stats.totalStudents > 0 ? Math.round((stats.absentToday / stats.totalStudents) * 100) : 0}% ของทั้งหมด
+              </p>
             </div>
             <UserX className="w-8 h-8 text-red-600" />
           </div>
@@ -76,8 +88,8 @@ export default function AttendanceSummaryCards({ stats }: AttendanceSummaryCards
               <p className="text-sm text-gray-600 mb-1">ยังไม่ได้เช็คชื่อ</p>
               <p className="text-2xl font-bold text-orange-600">{notCheckedYet.toLocaleString()}</p>
               <p className="text-xs text-gray-500">
-                {stats.totalStudents > 0 ? Math.round((notCheckedYet / stats.totalStudents) * 100) : 0}% 
-                ของนักเรียนทั้งหมด
+                {notCheckedPercentage}% ของนักเรียนทั้งหมด 
+                ({totalChecked.toLocaleString()} คนเช็คแล้ว)
               </p>
             </div>
             <Clock className="w-8 h-8 text-orange-600" />
