@@ -1,8 +1,91 @@
-
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 
-// New function for real attendance data export - only absent students
+// Function for Ministry of Education format attendance report
+export const getAttendanceReportData = async (classroom: string, month: string, year: string) => {
+  try {
+    console.log(`Fetching attendance report data for classroom: ${classroom}, month: ${month}, year: ${year}`);
+    
+    // Convert Buddhist year to Christian year for database queries
+    const christianYear = parseInt(year) - 543;
+    
+    // Calculate start and end dates for the month
+    const startDate = `${christianYear}-${month}-01`;
+    const endDate = `${christianYear}-${month}-31`; // We'll filter properly in the query
+    
+    console.log(`Date range: ${startDate} to ${endDate}`);
+
+    // Get all students in the selected classroom
+    const { data: students, error: studentsError } = await supabase
+      .from('students')
+      .select('*')
+      .eq('classroom', classroom)
+      .order('student_number', { ascending: true });
+
+    if (studentsError) {
+      console.error('Error fetching students:', studentsError);
+      throw studentsError;
+    }
+
+    if (!students || students.length === 0) {
+      console.log('No students found for classroom:', classroom);
+      return { students: [], attendance: {} };
+    }
+
+    console.log(`Found ${students.length} students in classroom ${classroom}`);
+
+    // Get all attendance records for these students in the specified month
+    const studentIds = students.map(s => s.id);
+    
+    const { data: attendanceRecords, error: attendanceError } = await supabase
+      .from('attendance_records')
+      .select('*')
+      .in('student_id', studentIds)
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date', { ascending: true });
+
+    if (attendanceError) {
+      console.error('Error fetching attendance records:', attendanceError);
+      throw attendanceError;
+    }
+
+    console.log(`Found ${attendanceRecords?.length || 0} attendance records for the month`);
+
+    // Organize attendance data by student and date
+    const attendanceMap: Record<string, Record<string, any>> = {};
+    
+    if (attendanceRecords) {
+      attendanceRecords.forEach(record => {
+        if (!attendanceMap[record.student_id]) {
+          attendanceMap[record.student_id] = {};
+        }
+        attendanceMap[record.student_id][record.date] = record;
+      });
+    }
+
+    // Transform students data for the report
+    const studentsData = students.map(student => ({
+      id: student.id,
+      studentNumber: student.student_number,
+      firstName: student.first_name,
+      lastName: student.last_name,
+    }));
+
+    console.log(`Prepared report data for ${studentsData.length} students`);
+
+    return {
+      students: studentsData,
+      attendance: attendanceMap
+    };
+    
+  } catch (error) {
+    console.error('Error fetching attendance report data:', error);
+    throw error;
+  }
+};
+
+// Keep the original function for backward compatibility
 export const getAttendanceDataForExport = async (startDate: string, endDate: string) => {
   try {
     console.log(`Fetching absent students data from ${startDate} to ${endDate}`);
