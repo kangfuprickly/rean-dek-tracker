@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -78,6 +79,9 @@ export default function ExportDataCard() {
         return;
       }
 
+      // Convert Buddhist year to Christian year for date key generation
+      const christianYear = parseInt(selectedYear) - 543;
+
       // Create header data
       const headerData = [
         [`ชั้นเรียน: ${selectedClassroom}`],
@@ -105,8 +109,11 @@ export default function ExportDataCard() {
         // Add attendance status for each day
         for (let day = 1; day <= selectedMonthData.days; day++) {
           const dayString = day.toString().padStart(2, '0');
-          const dateKey = `${selectedYear}-${selectedMonth}-${dayString}`;
+          // Use Christian year for the date key to match database format
+          const dateKey = `${christianYear}-${selectedMonth}-${dayString}`;
           const attendanceRecord = attendanceData.attendance[student.id]?.[dateKey];
+          
+          console.log(`Student ${student.firstName} ${student.lastName}, Day ${day}, DateKey: ${dateKey}, Record:`, attendanceRecord);
           
           let symbol = ''; // Empty = ยังไม่เช็ค
           if (attendanceRecord) {
