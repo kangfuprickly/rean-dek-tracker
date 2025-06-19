@@ -29,13 +29,28 @@ export const getCheckStatus = (stats: ClassroomStats): StatusType => {
   }
 };
 
+export const getStatusIcon = (status: StatusType) => {
+  switch (status) {
+    case 'completed':
+      return Check;
+    case 'partial':
+      return Hourglass;
+    case 'no-students':
+      return X;
+    case 'not-checked':
+    default:
+      return X;
+  }
+};
+
 export const getStatusDisplay = (status: StatusType, stats: ClassroomStats) => {
   const totalChecked = stats.present + stats.absent;
+  const IconComponent = getStatusIcon(status);
   
   switch (status) {
     case 'completed':
       return {
-        icon: <Check className="w-5 h-5" />,
+        IconComponent,
         text: 'เช็คแล้ว',
         badge: 'เสร็จสิ้น',
         color: 'bg-green-100 text-green-800 border-green-200',
@@ -43,7 +58,7 @@ export const getStatusDisplay = (status: StatusType, stats: ClassroomStats) => {
       };
     case 'partial':
       return {
-        icon: <Hourglass className="w-5 h-5" />,
+        IconComponent,
         text: 'เช็คบางส่วน',
         badge: `${totalChecked}/${stats.total}`,
         color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -51,7 +66,7 @@ export const getStatusDisplay = (status: StatusType, stats: ClassroomStats) => {
       };
     case 'no-students':
       return {
-        icon: <X className="w-4 h-4" />,
+        IconComponent,
         text: 'ไม่มีนักเรียน',
         badge: 'ว่าง',
         color: 'bg-gray-100 text-gray-600 border-gray-200',
@@ -60,7 +75,7 @@ export const getStatusDisplay = (status: StatusType, stats: ClassroomStats) => {
     case 'not-checked':
     default:
       return {
-        icon: <X className="w-5 h-5" />,
+        IconComponent,
         text: 'ยังไม่เช็ค',
         badge: 'รอดำเนินการ',
         color: 'bg-red-100 text-red-800 border-red-200',

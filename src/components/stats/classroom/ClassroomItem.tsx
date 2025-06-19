@@ -10,6 +10,7 @@ interface ClassroomItemProps {
 export default function ClassroomItem({ classroom, stats }: ClassroomItemProps) {
   const status = getCheckStatus(stats);
   const display = getStatusDisplay(status, stats);
+  const IconComponent = display.IconComponent;
   
   return (
     <div 
@@ -18,7 +19,7 @@ export default function ClassroomItem({ classroom, stats }: ClassroomItemProps) 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className={`${display.iconColor}`}>
-            {display.icon}
+            <IconComponent className="w-5 h-5" />
           </div>
           <div>
             <span className="font-medium text-gray-800">
