@@ -1,3 +1,4 @@
+
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -9,11 +10,15 @@ export const getAttendanceReportData = async (classroom: string, month: string, 
     // Convert Buddhist year to Christian year for database queries
     const christianYear = parseInt(year) - 543;
     
-    // Calculate start and end dates for the month
-    const startDate = `${christianYear}-${month}-01`;
-    const endDate = `${christianYear}-${month}-31`; // We'll filter properly in the query
+    // Calculate start and end dates for the month with proper date formatting
+    const monthNum = parseInt(month);
+    const startDate = new Date(christianYear, monthNum - 1, 1);
+    const endDate = new Date(christianYear, monthNum, 0); // Last day of the month
     
-    console.log(`Date range: ${startDate} to ${endDate}`);
+    const startDateString = format(startDate, 'yyyy-MM-dd');
+    const endDateString = format(endDate, 'yyyy-MM-dd');
+    
+    console.log(`Date range: ${startDateString} to ${endDateString}`);
 
     // Get all students in the selected classroom
     const { data: students, error: studentsError } = await supabase
@@ -24,7 +29,7 @@ export const getAttendanceReportData = async (classroom: string, month: string, 
 
     if (studentsError) {
       console.error('Error fetching students:', studentsError);
-      throw studentsError;
+      throw new Error(`ไม่สามารถดึงข้อมูลนักเรียนได้: ${studentsError.message}`);
     }
 
     if (!students || students.length === 0) {
@@ -41,13 +46,13 @@ export const getAttendanceReportData = async (classroom: string, month: string, 
       .from('attendance_records')
       .select('*')
       .in('student_id', studentIds)
-      .gte('date', startDate)
-      .lte('date', endDate)
+      .gte('date', startDateString)
+      .lte('date', endDateString)
       .order('date', { ascending: true });
 
     if (attendanceError) {
       console.error('Error fetching attendance records:', attendanceError);
-      throw attendanceError;
+      throw new Error(`ไม่สามารถดึงข้อมูลการเช็คชื่อได้: ${attendanceError.message}`);
     }
 
     console.log(`Found ${attendanceRecords?.length || 0} attendance records for the month`);

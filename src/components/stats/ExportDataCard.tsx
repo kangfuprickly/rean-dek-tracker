@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { getAttendanceReportData } from '@/utils/exportData';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ExportDataCard() {
   const [selectedGrade, setSelectedGrade] = useState<string>('');
@@ -13,6 +13,7 @@ export default function ExportDataCard() {
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string>('2568');
   const [isExporting, setIsExporting] = useState(false);
+  const { toast } = useToast();
 
   // Generate grade options (ม.1 to ม.6)
   const gradeOptions = Array.from({ length: 6 }, (_, i) => ({
@@ -44,7 +45,11 @@ export default function ExportDataCard() {
 
   const handleExport = async () => {
     if (!selectedGrade || !selectedClassroom || !selectedMonth) {
-      alert('กรุณาเลือกชั้นเรียน ห้องเรียน และเดือนที่ต้องการส่งออก');
+      toast({
+        title: "ข้อมูลไม่ครบ",
+        description: "กรุณาเลือกชั้นเรียน ห้องเรียน และเดือนที่ต้องการส่งออก",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -53,7 +58,9 @@ export default function ExportDataCard() {
       console.log('Exporting attendance report for:', selectedClassroom, selectedMonth, selectedYear);
       
       const selectedMonthData = monthOptions.find(m => m.value === selectedMonth);
-      if (!selectedMonthData) return;
+      if (!selectedMonthData) {
+        throw new Error('ไม่พบข้อมูลเดือนที่เลือก');
+      }
 
       // Get attendance data for the selected classroom and month
       const attendanceData = await getAttendanceReportData(
@@ -63,7 +70,11 @@ export default function ExportDataCard() {
       );
       
       if (!attendanceData.students || attendanceData.students.length === 0) {
-        alert('ไม่พบข้อมูลนักเรียนในห้องเรียนที่เลือก');
+        toast({
+          title: "ไม่พบข้อมูล",
+          description: "ไม่พบข้อมูลนักเรียนในห้องเรียนที่เลือก",
+          variant: "destructive"
+        });
         return;
       }
 
@@ -171,10 +182,18 @@ export default function ExportDataCard() {
       // Save file
       XLSX.writeFile(wb, filename);
       
-      alert(`ส่งออกรายงานสำเร็จ!\nไฟล์: ${filename}\nห้องเรียน: ${selectedClassroom}\nเดือน: ${selectedMonthData.label} ${selectedYear}`);
+      toast({
+        title: "ส่งออกสำเร็จ",
+        description: `ส่งออกรายงานสำเร็จ!\nไฟล์: ${filename}\nห้องเรียน: ${selectedClassroom}\nเดือน: ${selectedMonthData.label} ${selectedYear}`,
+      });
     } catch (error) {
       console.error('Export error:', error);
-      alert('เกิดข้อผิดพลาดในการส่งออกรายงาน');
+      const errorMessage = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดในการส่งออกรายงาน';
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: errorMessage,
+        variant: "destructive"
+      });
     } finally {
       setIsExporting(false);
     }
