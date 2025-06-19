@@ -7,7 +7,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { getAlertStudents } from '@/utils/alertStudents';
-import { AlertTriangle, UserX, MessageSquare, Phone, FileText } from 'lucide-react';
+import { AlertTriangle, UserX, MessageSquare, Phone, FileText, RefreshCw } from 'lucide-react';
 import { Student } from '@/types';
 
 export default function AlertsPage() {
@@ -16,26 +16,48 @@ export default function AlertsPage() {
   const [noteText, setNoteText] = useState('');
   const [alertStudents, setAlertStudents] = useState<{ student: Student; consecutiveAbsentDays: number }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    const loadAlertStudents = async () => {
-      try {
-        setIsLoading(true);
-        console.log('Loading alert students with optimized query...');
-        const students = await getAlertStudents();
-        setAlertStudents(students);
-        console.log(`Loaded ${students.length} alert students`);
-      } catch (error) {
-        console.error('Error loading alert students:', error);
-        setAlertStudents([]);
-      } finally {
-        setIsLoading(false);
+  const loadAlertStudents = async (showRefreshToast = false) => {
+    try {
+      setIsLoading(true);
+      console.log('Loading alert students from actual attendance records...');
+      const students = await getAlertStudents();
+      setAlertStudents(students);
+      console.log(`Loaded ${students.length} alert students`);
+      
+      if (showRefreshToast) {
+        toast({
+          title: "อัปเดตข้อมูลแล้ว! 🔄",
+          description: `พบนักเรียนที่ขาดเรียนต่อเนื่อง ${students.length} คน`,
+          duration: 3000,
+        });
       }
-    };
+    } catch (error) {
+      console.error('Error loading alert students:', error);
+      setAlertStudents([]);
+      if (showRefreshToast) {
+        toast({
+          title: "เกิดข้อผิดพลาด",
+          description: "ไม่สามารถโหลดข้อมูลการแจ้งเตือนได้",
+          duration: 3000,
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadAlertStudents();
   }, []);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await loadAlertStudents(true);
+    setIsRefreshing(false);
+  };
 
   const handleNotifyTeacher = (studentName: string) => {
     toast({
@@ -69,11 +91,9 @@ export default function AlertsPage() {
       <div className="p-4 pb-20 thai-content animate-fade-in">
         <div className="text-center py-12">
           <div className="text-thai-blue-600 mb-4">
-            <svg className="w-8 h-8 mx-auto animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
+            <RefreshCw className="w-8 h-8 mx-auto animate-spin" />
           </div>
-          <p className="text-gray-600">กำลังโหลดข้อมูล...</p>
+          <p className="text-gray-600">กำลังโหลดข้อมูลการแจ้งเตือน...</p>
         </div>
       </div>
     );
@@ -82,20 +102,33 @@ export default function AlertsPage() {
   return (
     <div className="p-4 pb-20 thai-content animate-fade-in">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">แจ้งเตือนการขาดเรียนผิดปกติ</h1>
-        <p className="text-gray-600">นักเรียนที่ขาดเรียนต่อเนื่อง 4 วันขึ้นไป</p>
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-2xl font-bold text-gray-800">แจ้งเตือนการขาดเรียนผิดปกติ</h1>
+          <Button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            size="sm"
+            variant="outline"
+            className="bg-white"
+          >
+            <RefreshCw className={`w-4 h-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+            รีเฟรช
+          </Button>
+        </div>
+        <p className="text-gray-600">นักเรียนที่ขาดเรียนต่อเนื่อง 4 วันขึ้นไป (จากข้อมูลการเช็คชื่อจริง)</p>
       </div>
 
       {alertStudents.length === 0 ? (
         <Card className="glass-card">
           <CardContent className="text-center py-12">
             <div className="text-thai-green-600 mb-4">
-              <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <UserX className="w-16 h-16 mx-auto opacity-50" />
             </div>
             <h3 className="text-lg font-semibold text-gray-800 mb-2">ไม่มีการแจ้งเตือน</h3>
-            <p className="text-gray-600">ขณะนี้ไม่มีนักเรียนที่ขาดเรียนต่อเนื่องผิดปกติ</p>
+            <p className="text-gray-600">ขณะนี้ไม่มีนักเรียนที่ขาดเรียนต่อเนื่อง 4 วันขึ้นไป</p>
+            <p className="text-sm text-gray-500 mt-2">
+              ข้อมูลจากการเช็คชื่อในฐานข้อมูล
+            </p>
           </CardContent>
         </Card>
       ) : (
@@ -135,7 +168,7 @@ export default function AlertsPage() {
                     
                     <div className="text-right">
                       <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-sm font-medium">
-                        ขาด {consecutiveAbsentDays} วัน
+                        ขาดต่อเนื่อง {consecutiveAbsentDays} วัน
                       </span>
                     </div>
                   </div>
@@ -154,11 +187,16 @@ export default function AlertsPage() {
                       </div>
                     </div>
                     
-                    <div className="text-sm">
-                      <span className="text-gray-600">สถานะการขาดเรียน:</span>
-                      <span className="ml-2 text-red-600 font-medium">
-                        ขาดเรียนต่อเนื่อง {consecutiveAbsentDays} วัน
-                      </span>
+                    <div className="text-sm bg-red-50 p-3 rounded-lg border border-red-200">
+                      <span className="text-gray-700 font-medium">สถานะการขาดเรียน:</span>
+                      <div className="mt-1">
+                        <span className="text-red-600 font-medium">
+                          ⚠️ ขาดเรียนต่อเนื่อง {consecutiveAbsentDays} วัน
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-600 mt-1">
+                        ข้อมูลจากการเช็คชื่อในฐานข้อมูล
+                      </p>
                     </div>
                     
                     <div className="flex gap-2 pt-2">
