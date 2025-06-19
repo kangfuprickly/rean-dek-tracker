@@ -68,22 +68,16 @@ export default function ClassroomCheckStatusCard({ classroomStats }: ClassroomCh
       return 'no-students';
     }
     
-    // เงื่อนไขสำคัญ: หากมาเรียน = 0 และ ขาดเรียน = จำนวนนักเรียนทั้งหมด 
-    // แสดงว่ายังไม่ได้บันทึกข้อมูลการเช็คชื่อ
-    if (stats.present === 0 && stats.absent === stats.total) {
-      return 'not-checked';
-    }
-    
     const totalChecked = stats.present + stats.absent;
     
+    // หากมีการเช็คชื่อครบตามจำนวนนักเรียนทั้งหมด = เช็คแล้ว
     if (totalChecked === stats.total) {
-      // All students have been checked
       return 'completed';
     } else if (totalChecked > 0) {
-      // Partially checked
+      // มีการเช็คชื่อบางส่วน = เช็คบางส่วน
       return 'partial';
     } else {
-      // No attendance records exist
+      // ไม่มีการเช็คชื่อเลย = ยังไม่เช็ค
       return 'not-checked';
     }
   };
