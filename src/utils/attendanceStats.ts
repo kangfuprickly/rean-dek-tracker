@@ -39,25 +39,22 @@ export const getAttendanceStats = async (date?: string) => {
 
     const presentToday = dateRecords?.filter(record => record.status === 'present').length || 0;
     const explicitlyAbsent = dateRecords?.filter(record => record.status === 'absent').length || 0;
-    const totalRecorded = dateRecords?.length || 0;
     
-    // คำนวณนักเรียนขาดเรียน = นักเรียนที่เช็คเป็นขาด + นักเรียนที่ยังไม่ได้เช็ค
-    const notCheckedYet = (totalStudents || 0) - totalRecorded;
-    const absentToday = explicitlyAbsent + notCheckedYet;
+    // คำนวณนักเรียนขาดเรียน = นักเรียนทั้งหมด - นักเรียนที่มาเรียน
+    const absentToday = (totalStudents || 0) - presentToday;
     
     console.log(`[getAttendanceStats] Stats for ${targetDate}:`, {
       totalStudents: totalStudents || 0,
       presentToday,
       explicitlyAbsent,
-      notCheckedYet,
       absentToday,
-      totalRecorded
+      calculation: `${totalStudents} (total) - ${presentToday} (present) = ${absentToday} (absent)`
     });
     
     return {
       totalStudents: totalStudents || 0,
       presentToday,
-      absentToday, // รวมทั้งที่เช็คเป็นขาดและที่ยังไม่ได้เช็ค
+      absentToday, // คำนวณจากนักเรียนทั้งหมด ลบด้วยนักเรียนที่มาเรียน
     };
   } catch (error) {
     console.error('[getAttendanceStats] Error fetching attendance stats:', error);
