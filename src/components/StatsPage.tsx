@@ -9,7 +9,14 @@ import ClassroomCheckStatusCard from './stats/ClassroomCheckStatusCard';
 import EmptyStateCard from './stats/EmptyStateCard';
 import LoadingState from './stats/LoadingState';
 import ExportDataCard from './stats/export/ExportDataCard';
+import SchoolClosedCard from './stats/SchoolClosedCard';
 import { format } from 'date-fns';
+
+// Helper function to check if a date is a weekend (Friday = 5, Saturday = 6)
+const isSchoolClosed = (date: Date): boolean => {
+  const dayOfWeek = date.getDay();
+  return dayOfWeek === 5 || dayOfWeek === 6; // Friday or Saturday
+};
 
 export default function StatsPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -33,6 +40,16 @@ export default function StatsPage() {
       }
       
       const dateToUse = date || selectedDate;
+      
+      // Check if school is closed on this date
+      if (isSchoolClosed(dateToUse)) {
+        console.log(`[StatsPage] School is closed on ${format(dateToUse, 'yyyy-MM-dd')}`);
+        // Set empty stats for closed days
+        setStats({ totalStudents: 0, presentToday: 0, absentToday: 0 });
+        setClassroomStats({});
+        return;
+      }
+      
       const dateString = format(dateToUse, 'yyyy-MM-dd');
       
       console.log(`[StatsPage] Fetching stats for date: ${dateString}`);
@@ -102,6 +119,22 @@ export default function StatsPage() {
 
   if (loading) {
     return <LoadingState />;
+  }
+
+  // Check if school is closed on selected date
+  if (isSchoolClosed(selectedDate)) {
+    return (
+      <div className="p-4 pb-20 thai-content animate-fade-in">
+        <SchoolLogo />
+        <StatsHeader 
+          onRefresh={handleRefresh} 
+          refreshing={refreshing}
+          selectedDate={selectedDate}
+          onDateChange={handleDateChange}
+        />
+        <SchoolClosedCard selectedDate={selectedDate} />
+      </div>
+    );
   }
 
   // Always show classroom stats since we want to display all classrooms regardless of student count

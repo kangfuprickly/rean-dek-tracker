@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -8,6 +7,13 @@ import { Grade, Student } from '@/types';
 import DateSelector from './attendance/DateSelector';
 import ClassroomSelector from './attendance/ClassroomSelector';
 import StudentList from './attendance/StudentList';
+import SchoolClosedCard from './stats/SchoolClosedCard';
+
+// Helper function to check if a date is a weekend (Friday = 5, Saturday = 6)
+const isSchoolClosed = (date: Date): boolean => {
+  const dayOfWeek = date.getDay();
+  return dayOfWeek === 5 || dayOfWeek === 6; // Friday or Saturday
+};
 
 // Define custom event for stats refresh
 declare global {
@@ -34,10 +40,10 @@ export default function AttendancePage() {
       // Reset classroom data when date changes
       setAttendanceData({});
       setExistingRecords({});
-      // Reload students if classroom is already selected
-      if (selectedClassroom) {
-        handleClassroomChange(selectedClassroom);
-      }
+      // Reset selections when switching to/from closed days
+      setSelectedGrade('');
+      setSelectedClassroom('');
+      setStudents([]);
     }
   };
 
@@ -164,6 +170,25 @@ export default function AttendancePage() {
       setSaveLoading(false);
     }
   };
+
+  // Show school closed message if selected date is weekend
+  if (isSchoolClosed(selectedDate)) {
+    return (
+      <div className="p-4 pb-20 thai-content animate-fade-in">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">เช็คการมาเรียนของนักเรียน</h1>
+          <p className="text-gray-600">เลือกวันที่และห้องเรียนที่ต้องการเช็คชื่อ</p>
+        </div>
+
+        <DateSelector 
+          selectedDate={selectedDate}
+          onDateChange={handleDateChange}
+        />
+
+        <SchoolClosedCard selectedDate={selectedDate} />
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 pb-20 thai-content animate-fade-in">
