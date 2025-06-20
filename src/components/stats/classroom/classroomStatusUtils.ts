@@ -1,4 +1,3 @@
-
 import { Check, X, Hourglass } from 'lucide-react';
 
 export interface ClassroomStats {
@@ -16,6 +15,11 @@ export const getCheckStatus = (stats: ClassroomStats): StatusType => {
   }
   
   const totalChecked = stats.present + stats.absent;
+  
+  // หากไม่มีการเช็คชื่อเลย (ทั้ง present และ absent เป็น 0) = ยังไม่เช็ค
+  if (totalChecked === 0) {
+    return 'not-checked';
+  }
   
   // หากมีการเช็คชื่อครบตามจำนวนนักเรียนทั้งหมด = เช็คแล้ว
   if (totalChecked === stats.total) {

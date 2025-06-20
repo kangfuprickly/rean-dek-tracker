@@ -139,21 +139,23 @@ export const getClassroomStats = async (date?: string) => {
 
     console.log(`[getClassroomStats] Successfully fetched ${allAttendanceRecords.length} attendance records for ${targetDate}`);
 
-    // Count present students per classroom using the mapping
+    // Count present and absent students per classroom using the mapping
     if (allAttendanceRecords && allAttendanceRecords.length > 0) {
       allAttendanceRecords.forEach(record => {
         const classroom = studentClassroomMap[record.student_id];
-        if (classroom && classroomStats[classroom] && record.status === 'present') {
-          classroomStats[classroom].present++;
+        if (classroom && classroomStats[classroom]) {
+          if (record.status === 'present') {
+            classroomStats[classroom].present++;
+          } else if (record.status === 'absent') {
+            classroomStats[classroom].absent++;
+          }
         }
       });
     }
 
-    // Calculate absent counts for each classroom (total - present)
+    // Log final stats for classrooms with students
     Object.keys(classroomStats).forEach(classroom => {
       const stats = classroomStats[classroom];
-      stats.absent = Math.max(0, stats.total - stats.present);
-      
       if (stats.total > 0) {
         console.log(`[getClassroomStats] ${classroom}: total=${stats.total}, present=${stats.present}, absent=${stats.absent}`);
       }

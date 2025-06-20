@@ -41,7 +41,7 @@ export default function ClassroomItem({ classroom, stats }: ClassroomItemProps) 
         </div>
       </div>
       
-      {/* แสดงรายละเอียดการมาเรียน/ขาดเรียน เฉพาะกรณีที่มีการเช็คชื่อแล้ว */}
+      {/* แสดงรายละเอียดการมาเรียน/ขาดเรียน เฉพาะกรณีที่มีการเช็คชื่อแล้ว (ไม่ใช่ not-checked) */}
       {(status === 'completed' || status === 'partial') && (
         <div className="mt-3 pt-2 border-t border-gray-200/50">
           <div className="flex justify-between text-xs">
