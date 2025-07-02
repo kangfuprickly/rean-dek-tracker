@@ -150,7 +150,7 @@ export default function StatsPage() {
         selectedDate={selectedDate}
         onDateChange={handleDateChange}
       />
-      <AttendanceSummaryCards stats={stats} />
+      <AttendanceSummaryCards stats={stats} classroomStats={classroomStats} />
       
       {/* Show message only when there's absolutely no data at all */}
       {stats.totalStudents === 0 && !hasClassroomData && <EmptyStateCard />}

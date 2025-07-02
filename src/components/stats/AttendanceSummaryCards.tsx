@@ -1,6 +1,7 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Users, UserCheck, UserX, TrendingUp, Clock } from 'lucide-react';
+import { getCheckStatus, ClassroomStats } from './classroom/classroomStatusUtils';
 
 interface AttendanceStats {
   totalStudents: number;
@@ -10,9 +11,10 @@ interface AttendanceStats {
 
 interface AttendanceSummaryCardsProps {
   stats: AttendanceStats;
+  classroomStats: Record<string, ClassroomStats>;
 }
 
-export default function AttendanceSummaryCards({ stats }: AttendanceSummaryCardsProps) {
+export default function AttendanceSummaryCards({ stats, classroomStats }: AttendanceSummaryCardsProps) {
   // คำนวณจากนักเรียนทั้งหมดในระบบเป็นฐาน (Base)
   const totalChecked = stats.presentToday + stats.absentToday;
   const notCheckedYet = stats.totalStudents - totalChecked;
@@ -22,6 +24,47 @@ export default function AttendanceSummaryCards({ stats }: AttendanceSummaryCards
   
   // เปอร์เซ็นต์ของนักเรียนที่ยังไม่ได้เช็คชื่อ
   const notCheckedPercentage = stats.totalStudents > 0 ? Math.round((notCheckedYet / stats.totalStudents) * 100) : 0;
+
+  // หาห้องเรียนที่ยังไม่ได้เช็คชื่อ
+  const notCheckedClassrooms = Object.entries(classroomStats)
+    .filter(([_, classStats]) => {
+      const status = getCheckStatus(classStats);
+      return status === 'not-checked' && classStats.total > 0; // เฉพาะห้องที่มีนักเรียนและยังไม่เช็ค
+    })
+    .map(([classroom]) => classroom)
+    .sort((a, b) => {
+      // เรียงตามลำดับห้อง
+      const parseClassroom = (classroom: string) => {
+        const match = classroom.match(/ม\.(\d+)\/(\d+)/);
+        if (match) {
+          return { grade: parseInt(match[1]), room: parseInt(match[2]) };
+        }
+        return { grade: 0, room: 0 };
+      };
+      
+      const aData = parseClassroom(a);
+      const bData = parseClassroom(b);
+      
+      if (aData.grade !== bData.grade) {
+        return aData.grade - bData.grade;
+      }
+      return aData.room - bData.room;
+    });
+
+  // สร้างข้อความสำหรับแสดงรายชื่อห้องเรียน
+  const getNotCheckedDisplay = () => {
+    if (notCheckedClassrooms.length === 0) {
+      return "เช็คชื่อครบทุกห้องแล้ว";
+    }
+    
+    // แสดงเฉพาะหมายเลขห้อง เช่น 1/1, 2/2, 3/3
+    const roomNumbers = notCheckedClassrooms.map(classroom => {
+      const match = classroom.match(/ม\.(\d+)\/(\d+)/);
+      return match ? `${match[1]}/${match[2]}` : classroom;
+    });
+    
+    return roomNumbers.join(', ');
+  };
 
   return (
     <div className="grid grid-cols-2 gap-4 mb-6">
@@ -84,12 +127,15 @@ export default function AttendanceSummaryCards({ stats }: AttendanceSummaryCards
       <Card className="glass-card col-span-2">
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex-1">
               <p className="text-sm text-gray-600 mb-1">ยังไม่ได้เช็คชื่อ</p>
-              <p className="text-2xl font-bold text-orange-600">{notCheckedYet.toLocaleString()}</p>
+              <p className="text-lg font-bold text-orange-600 mb-1">{getNotCheckedDisplay()}</p>
               <p className="text-xs text-gray-500">
-                {notCheckedPercentage}% ของนักเรียนทั้งหมด 
-                ({totalChecked.toLocaleString()} คนเช็คแล้ว)
+                {notCheckedClassrooms.length > 0 ? (
+                  `${notCheckedClassrooms.length} ห้องเรียน (${notCheckedYet.toLocaleString()} คน)`
+                ) : (
+                  `ทุกห้องเช็คชื่อครบแล้ว (${totalChecked.toLocaleString()} คนเช็คแล้ว)`
+                )}
               </p>
             </div>
             <Clock className="w-8 h-8 text-orange-600" />
