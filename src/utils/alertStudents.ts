@@ -19,6 +19,7 @@ export const getAlertStudents = async () => {
       .from('attendance_records')
       .select('student_id, date, status')
       .in('date', last10Days)
+      .not('student_id', 'is', null)
       .order('date', { ascending: false });
 
     if (recordsError) {

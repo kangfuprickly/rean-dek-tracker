@@ -145,34 +145,34 @@ export default function AlertsPage() {
             </CardContent>
           </Card>
 
-          <Accordion type="single" collapsible className="space-y-3">
+          <div className="space-y-3">
             {alertStudents.map(({ student, consecutiveAbsentDays }, index) => (
-              <AccordionItem 
-                key={student.id} 
-                value={student.id}
-                className="border border-red-200 rounded-lg bg-red-50/50"
-              >
-                <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                  <div className="flex items-center justify-between w-full mr-4">
-                    <div className="flex items-center gap-3">
-                      <UserX className="w-5 h-5 text-red-600" />
-                      <div className="text-left">
-                        <p className="font-semibold text-gray-800">
-                          {student.firstName} {student.lastName}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {student.classroom} • เลขประจำตัว: {student.studentNumber}
-                        </p>
+              <Accordion key={student.id} type="single" collapsible>
+                <AccordionItem 
+                  value={student.id}
+                  className="border border-red-200 rounded-lg bg-red-50/50"
+                >
+                  <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                    <div className="flex items-center justify-between w-full mr-4">
+                      <div className="flex items-center gap-3">
+                        <UserX className="w-5 h-5 text-red-600" />
+                        <div className="text-left">
+                          <p className="font-semibold text-gray-800">
+                            {student.firstName} {student.lastName}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {student.classroom} • เลขประจำตัว: {student.studentNumber}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="text-right">
+                        <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-sm font-medium">
+                          ขาดต่อเนื่อง {consecutiveAbsentDays} วัน
+                        </span>
                       </div>
                     </div>
-                    
-                    <div className="text-right">
-                      <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-sm font-medium">
-                        ขาดต่อเนื่อง {consecutiveAbsentDays} วัน
-                      </span>
-                    </div>
-                  </div>
-                </AccordionTrigger>
+                  </AccordionTrigger>
                 
                 <AccordionContent className="px-4 pb-4">
                   <div className="bg-white rounded-lg p-4 space-y-4">
@@ -257,9 +257,10 @@ export default function AlertsPage() {
                     </div>
                   </div>
                 </AccordionContent>
-              </AccordionItem>
+                </AccordionItem>
+              </Accordion>
             ))}
-          </Accordion>
+          </div>
         </>
       )}
     </div>
