@@ -126,19 +126,36 @@ export default function AttendanceSummaryCards({ stats, classroomStats }: Attend
 
       <Card className="glass-card col-span-2">
         <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <p className="text-sm text-gray-600 mb-1">ยังไม่ได้เช็คชื่อ</p>
-              <p className="text-lg font-bold text-orange-600 mb-1">{getNotCheckedDisplay()}</p>
-              <p className="text-xs text-gray-500">
-                {notCheckedClassrooms.length > 0 ? (
-                  `${notCheckedClassrooms.length} ห้องเรียน (${notCheckedYet.toLocaleString()} คน)`
-                ) : (
-                  `ทุกห้องเช็คชื่อครบแล้ว (${totalChecked.toLocaleString()} คนเช็คแล้ว)`
-                )}
-              </p>
-            </div>
-            <Clock className="w-8 h-8 text-orange-600" />
+          <div>
+            <p className="text-sm text-gray-600 mb-2">ยังไม่ได้เช็คชื่อ</p>
+            {notCheckedClassrooms.length > 0 ? (
+              <div>
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {notCheckedClassrooms.map((classroom, index) => {
+                    const match = classroom.match(/ม\.(\d+)\/(\d+)/);
+                    const roomNumber = match ? `${match[1]}/${match[2]}` : classroom;
+                    return (
+                      <span
+                        key={classroom}
+                        className="inline-block px-2 py-1 bg-orange-100 text-orange-700 rounded text-sm font-medium"
+                      >
+                        {roomNumber}
+                      </span>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-gray-500">
+                  {notCheckedClassrooms.length} ห้องเรียน ({notCheckedYet.toLocaleString()} คน)
+                </p>
+              </div>
+            ) : (
+              <div>
+                <p className="text-lg font-bold text-thai-green-600 mb-1">เช็คชื่อครบทุกห้องแล้ว</p>
+                <p className="text-xs text-gray-500">
+                  ทุกห้องเช็คชื่อครบแล้ว ({totalChecked.toLocaleString()} คนเช็คแล้ว)
+                </p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
