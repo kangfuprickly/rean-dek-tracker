@@ -8,6 +8,7 @@ import DateSelector from './attendance/DateSelector';
 import ClassroomSelector from './attendance/ClassroomSelector';
 import StudentList from './attendance/StudentList';
 import SchoolClosedCard from './stats/SchoolClosedCard';
+import AbsentStudentsDialog from './attendance/AbsentStudentsDialog';
 
 // Helper function to check if a date is a weekend (Friday = 5, Saturday = 6)
 const isSchoolClosed = (date: Date): boolean => {
@@ -31,6 +32,8 @@ export default function AttendancePage() {
   const [existingRecords, setExistingRecords] = useState<Record<string, string>>({});
   const [isLoading, setSaveLoading] = useState(false);
   const [isLoadingStudents, setIsLoadingStudents] = useState(false);
+  const [showAbsentDialog, setShowAbsentDialog] = useState(false);
+  const [absentStudents, setAbsentStudents] = useState<Student[]>([]);
   const { toast } = useToast();
 
   const handleDateChange = (date: Date | undefined) => {
@@ -138,6 +141,10 @@ export default function AttendancePage() {
       const presentCount = Object.values(attendanceData).filter(Boolean).length;
       const absentCount = students.length - presentCount;
       
+      // Get list of absent students for the dialog
+      const absentStudentsList = students.filter(student => !attendanceData[student.id]);
+      setAbsentStudents(absentStudentsList);
+      
       console.log(`[AttendancePage] Successfully saved attendance: ${presentCount} present, ${absentCount} absent`);
       
       // Dispatch custom event to notify other components about attendance update
@@ -155,6 +162,9 @@ export default function AttendancePage() {
         description: `บันทึกการเช็คชื่อ ${selectedClassroom} วันที่ ${format(selectedDate, 'dd/MM/yyyy')} เรียบร้อยแล้ว\nมาเรียน: ${presentCount} คน, ขาดเรียน: ${absentCount} คน`,
         duration: 3000,
       });
+      
+      // Show absent students dialog
+      setShowAbsentDialog(true);
       
       // Refresh the data to get updated records
       await handleClassroomChange(selectedClassroom);
@@ -219,6 +229,14 @@ export default function AttendancePage() {
         isLoadingStudents={isLoadingStudents}
         onAttendanceChange={handleAttendanceChange}
         onSave={handleSave}
+      />
+
+      <AbsentStudentsDialog
+        isOpen={showAbsentDialog}
+        onClose={() => setShowAbsentDialog(false)}
+        absentStudents={absentStudents}
+        selectedDate={selectedDate}
+        classroom={selectedClassroom}
       />
     </div>
   );
